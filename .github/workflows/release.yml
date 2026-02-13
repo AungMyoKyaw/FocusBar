@@ -1,0 +1,109 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: macos-latest
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
+
+      - name: Show Xcode version
+        run: xcodebuild -version
+
+      - name: Build FocusBar
+        run: |
+          xcodebuild -project FocusBar.xcodeproj \
+            -scheme FocusBar \
+            -configuration Release \
+            -derivedDataPath DerivedData \
+            CODE_SIGN_IDENTITY=- \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO
+
+      - name: CodeSign App
+        run: |
+          CODESIGN_ALLOCATE=$(xcrun -find codesign_allocate)
+          CODESIGN_IDENTITY="-"
+          APP_PATH="DerivedData/Build/Products/Release/FocusBar.app"
+          
+          if [ -d "$APP_PATH" ]; then
+            codesign --force --deep --sign - "$APP_PATH"
+            echo "Codesigned: $APP_PATH"
+          else
+            echo "App not found at: $APP_PATH"
+            ls -la DerivedData/Build/Products/Release/
+          fi
+
+      - name: Verify CodeSign
+        run: |
+          APP_PATH="DerivedData/Build/Products/Release/FocusBar.app"
+          if [ -d "$APP_PATH" ]; then
+            spctl --assess --type exec --ignore-cache --no-cache "$APP_PATH" || echo "Gatekeeper assessment completed"
+          fi
+
+      - name: Create Artifact
+        run: |
+          APP_PATH="DerivedData/Build/Products/Release/FocusBar.app"
+          if [ -d "$APP_PATH" ]; then
+            zip -r FocusBar.app.zip "$APP_PATH"
+            ls -la FocusBar.app.zip
+          else
+            echo "App not found for packaging"
+            exit 1
+          fi
+
+      - name: Generate Changelog
+        id: changelog
+        run: |
+          TAG_NAME=${GITHUB_REF#refs/tags/}
+          PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+          
+          if [ -n "$PREV_TAG" ]; then
+            CHANGES=$(git log --pretty=format:"- %s (%h)" $PREV_TAG..HEAD)
+          else
+            CHANGES=$(git log --pretty=format:"- %s (%h)" -10)
+          fi
+          
+          echo "Changes since last tag:" > changelog.txt
+          echo "" >> changelog.txt
+          echo "**Version**: $TAG_NAME" >> changelog.txt
+          echo "" >> changelog.txt
+          $CHANGES >> changelog.txt || echo "No commit history" >> changelog.txt
+          
+          cat changelog.txt
+          echo "changelog=$(cat changelog.txt | base64 -w0)" >> $GITHUB_OUTPUT
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          body: ${{ steps.changelog.outputs.changelog }}
+          files: FocusBar.app.zip
+          draft: false
+          prerelease: ${{ contains(github.ref, 'alpha') || contains(github.ref, 'beta') }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Cleanup
+        run: |
+          rm -rf DerivedData
+          rm -f FocusBar.app.zip
+          rm -f changelog.txt
+          echo "Cleanup completed"

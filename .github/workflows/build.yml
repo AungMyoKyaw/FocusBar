@@ -1,0 +1,40 @@
+name: Build
+
+on:
+  push:
+    branches: [main, master, '*']
+  pull_request:
+    branches: [main, master]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: macos-latest
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
+
+      - name: Show Xcode version
+        run: xcodebuild -version
+
+      - name: Build FocusBar
+        run: |
+          xcodebuild -project FocusBar.xcodeproj \
+            -scheme FocusBar \
+            -configuration Debug \
+            -derivedDataPath DerivedData \
+            build
+
+      - name: Cleanup
+        run: |
+          rm -rf DerivedData
