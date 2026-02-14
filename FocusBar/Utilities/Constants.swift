@@ -2,6 +2,16 @@ import Foundation
 
 enum Constants {
 
+    static let feedbackURL = "mailto:support@focusbar.app"
+
+    static var appVersion: String {
+        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
+    }
+
+    static var appBuildNumber: String {
+        Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "1"
+    }
+
     static let defaultPomodoroDuration = 25
     static let defaultShortBreakDuration = 5
     static let defaultLongBreakDuration = 15

@@ -12,6 +12,8 @@ struct ReminderPicker: View {
                     TextField("Search reminders...", text: $viewModel.searchQuery)
                         .textFieldStyle(.roundedBorder)
                         .controlSize(.small)
+                        .accessibilityLabel("Search reminders")
+                        .accessibilityHint("Type to filter your reminders")
                         .onChange(of: viewModel.searchQuery) {
                             Task { await viewModel.loadReminders() }
                         }
@@ -30,6 +32,8 @@ struct ReminderPicker: View {
                         }
                         .font(.caption)
                         .buttonStyle(.plain)
+                        .accessibilityLabel("Clear selected reminder")
+                        .accessibilityHint("Removes the linked reminder from this session")
                     }
                 }
 
@@ -45,6 +49,7 @@ struct ReminderPicker: View {
                                     Text(reminder.title)
                                         .font(.caption)
                                         .frame(maxWidth: .infinity, alignment: .leading)
+                                        .accessibilityLabel(reminder.title)
                                 }
                                 .buttonStyle(.plain)
                             }
@@ -57,6 +62,8 @@ struct ReminderPicker: View {
                     TextField("Quick add task...", text: $viewModel.quickAddText)
                         .textFieldStyle(.roundedBorder)
                         .controlSize(.small)
+                        .accessibilityLabel("Quick add task")
+                        .accessibilityHint("Type a task name and press Return to create a new reminder")
                         .onSubmit {
                             Task { await viewModel.createQuickTask() }
                         }
@@ -68,6 +75,7 @@ struct ReminderPicker: View {
                 .font(.caption)
                 .buttonStyle(.plain)
                 .foregroundStyle(.blue)
+                .accessibilityHint("Requests permission to access your Apple Reminders")
             }
         }
     }

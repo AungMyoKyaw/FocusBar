@@ -8,10 +8,25 @@ struct TimerDisplayView: View {
         switch displayMode {
         case "progressBar":
             progressBarLabel
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel(timerAccessibilityLabel)
         case "icon":
             Image(systemName: iconName)
+                .accessibilityLabel(timerAccessibilityLabel)
         default:
             Text(timerViewModel.menuBarTitle)
+                .accessibilityLabel(timerAccessibilityLabel)
+        }
+    }
+
+    private var timerAccessibilityLabel: String {
+        switch timerViewModel.timerState {
+        case .idle:
+            return "FocusBar: idle"
+        case .running:
+            return "FocusBar: \(timerViewModel.currentSessionType.displayName), \(timerViewModel.formattedTime) remaining"
+        case .paused:
+            return "FocusBar: \(timerViewModel.currentSessionType.displayName) paused, \(timerViewModel.formattedTime) remaining"
         }
     }
 

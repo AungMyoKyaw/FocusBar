@@ -14,6 +14,8 @@ struct FocusByHourChart: View {
         }
         .chartXAxisLabel("Hour of Day")
         .chartYAxisLabel("Sessions")
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Focus by hour chart with \(data.count) hours of data")
     }
 }
 
@@ -29,5 +31,7 @@ struct TaskBreakdownChart: View {
             .foregroundStyle(.blue.gradient)
         }
         .chartXAxisLabel("Focus Minutes")
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Task breakdown chart showing \(min(data.count, 8)) tasks")
     }
 }

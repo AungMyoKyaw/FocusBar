@@ -7,6 +7,11 @@ struct MenuBarView: View {
 
     var body: some View {
         VStack(spacing: 12) {
+            if let error = timerViewModel.currentError {
+                ErrorBannerView(error: error) {
+                    timerViewModel.currentError = nil
+                }
+            }
             headerSection
             timerSection
             controlsSection
@@ -37,6 +42,7 @@ struct MenuBarView: View {
                 Text(timerViewModel.currentSessionType.displayName)
                     .font(.caption)
                     .foregroundStyle(.secondary)
+                    .accessibilityLabel("Current session: \(timerViewModel.currentSessionType.displayName)")
             }
         }
     }
@@ -48,10 +54,13 @@ struct MenuBarView: View {
                     Text(timerViewModel.formattedTime)
                         .font(.system(size: 48, weight: .light, design: .monospaced))
                         .foregroundStyle(timerViewModel.timerState == .paused ? .secondary : .primary)
+                        .accessibilityLabel("Time remaining: \(timerViewModel.formattedTime)")
+                        .accessibilityValue(timerViewModel.timerState == .paused ? "Paused" : "Running")
 
                     Text("Session \(timerViewModel.completedPomodorosInCycle + 1)")
                         .font(.caption)
                         .foregroundStyle(.secondary)
+                        .accessibilityLabel("Session \(timerViewModel.completedPomodorosInCycle + 1) of cycle")
                 }
             }
         }
@@ -68,6 +77,7 @@ struct MenuBarView: View {
                 }
                 .buttonStyle(.borderedProminent)
                 .controlSize(.large)
+                .accessibilityHint("Starts a new focus session")
             } else {
                 HStack(spacing: 12) {
                     Button {
@@ -81,6 +91,8 @@ struct MenuBarView: View {
                     }
                     .buttonStyle(.borderedProminent)
                     .controlSize(.regular)
+                    .accessibilityLabel(timerViewModel.timerState == .paused ? "Resume timer" : "Pause timer")
+                    .accessibilityHint(timerViewModel.timerState == .paused ? "Resumes the current session" : "Pauses the current session")
 
                     Menu {
                         Button("Skip") { timerViewModel.skip() }
@@ -88,6 +100,8 @@ struct MenuBarView: View {
                     } label: {
                         Image(systemName: "ellipsis.circle")
                     }
+                    .accessibilityLabel("More actions")
+                    .accessibilityHint("Skip or reset the current session")
                 }
             }
         }
@@ -99,15 +113,19 @@ struct MenuBarView: View {
         VStack(spacing: 4) {
             Button("Statistics") { openWindow(id: "stats") }
                 .buttonStyle(.plain)
+                .accessibilityHint("Opens the statistics window")
             Button("Achievements") { openWindow(id: "achievements") }
                 .buttonStyle(.plain)
+                .accessibilityHint("Opens the achievements window")
             Button("Settings...") { openWindow(id: "settings") }
                 .buttonStyle(.plain)
+                .accessibilityHint("Opens the settings window")
             Divider()
             Button("Quit FocusBar") {
                 NSApplication.shared.terminate(nil)
             }
             .buttonStyle(.plain)
+            .accessibilityHint("Quits the application")
         }
     }
 }

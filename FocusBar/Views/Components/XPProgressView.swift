@@ -28,5 +28,8 @@ struct XPProgressView: View {
                 .font(.caption2)
                 .foregroundStyle(.secondary)
         }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Level \(currentLevel), \(levelTitle), \(currentXP) XP\(currentStreak > 0 ? ", \(currentStreak) day streak" : "")")
+        .accessibilityValue("\(Int(xpProgress * 100)) percent to next level")
     }
 }
