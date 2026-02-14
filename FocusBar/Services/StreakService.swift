@@ -50,20 +50,24 @@ final class StreakService {
         }
 
         if useStreakFreeze() {
+            LoggingService.logInfo("Streak freeze auto-applied, streak preserved at \(currentStreak)", category: .gamification)
             return
         }
 
+        LoggingService.logInfo("Streak broken, resetting from \(currentStreak) to 0", category: .gamification)
         currentStreak = 0
     }
 
     func incrementStreak() {
         currentStreak += 1
+        LoggingService.logInfo("Streak incremented to \(currentStreak)", category: .gamification)
         recordDailyGoalMet()
     }
 
     func useStreakFreeze() -> Bool {
         if streakFreezesRemaining > 0 {
             streakFreezesRemaining -= 1
+            LoggingService.logInfo("Streak freeze used, \(streakFreezesRemaining) remaining", category: .gamification)
             return true
         }
         return false

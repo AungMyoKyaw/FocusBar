@@ -36,6 +36,7 @@ final class TimerViewModel {
     }
 
     var modelContext: ModelContext?
+    var currentError: AppError?
     private var dailyPomodoroCount: Int = 0
 
     init(

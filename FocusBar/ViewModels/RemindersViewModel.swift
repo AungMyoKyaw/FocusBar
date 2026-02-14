@@ -7,6 +7,7 @@ final class RemindersViewModel {
     var searchQuery: String = ""
     var selectedReminder: ReminderItem?
     var quickAddText: String = ""
+    var currentError: AppError?
 
     var isAuthorized: Bool { reminderService.isAuthorized }
 
@@ -24,15 +25,28 @@ final class RemindersViewModel {
 
     func createQuickTask() async {
         guard !quickAddText.isEmpty else { return }
-        if let item = await reminderService.createReminder(title: quickAddText) {
+        do {
+            let item = try await reminderService.createReminder(title: quickAddText)
             selectedReminder = item
             quickAddText = ""
             await loadReminders()
+        } catch {
+            if let appError = error as? AppError {
+                currentError = appError
+                LoggingService.logError(appError, context: "createQuickTask")
+            }
         }
     }
 
     func logFocusTime(minutes: Int) async {
         guard let reminder = selectedReminder else { return }
-        _ = await reminderService.appendFocusTime(reminderId: reminder.id, minutes: minutes, date: Date())
+        do {
+            try await reminderService.appendFocusTime(reminderId: reminder.id, minutes: minutes, date: Date())
+        } catch {
+            if let appError = error as? AppError {
+                currentError = appError
+                LoggingService.logError(appError, context: "logFocusTime")
+            }
+        }
     }
 }

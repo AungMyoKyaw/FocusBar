@@ -10,6 +10,8 @@ final class ExportService {
         achievements: [Achievement],
         dailyStats: [DailyStats]
     ) async throws -> URL? {
+        LoggingService.logInfo("Starting data export (\(sessions.count) sessions, \(achievements.count) achievements, \(dailyStats.count) daily stats)", category: .data)
+
         let exportData = ExportData(
             exportDate: ISO8601DateFormatter().string(from: Date()),
             sessions: sessions.map { SessionExport(session: $0) },
@@ -20,7 +22,13 @@ final class ExportService {
 
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-        let data = try encoder.encode(exportData)
+        let data: Data
+        do {
+            data = try encoder.encode(exportData)
+        } catch {
+            LoggingService.logError(.exportFailed("Encoding failed: \(error.localizedDescription)"), context: "exportAll")
+            throw AppError.exportFailed("Failed to encode export data: \(error.localizedDescription)")
+        }
 
         let panel = NSSavePanel()
         let formatter = DateFormatter()
@@ -29,10 +37,19 @@ final class ExportService {
         panel.allowedContentTypes = [.json]
 
         let response = await panel.beginSheetModal(for: NSApp.keyWindow ?? NSApp.mainWindow ?? NSWindow())
-        guard response == .OK, let url = panel.url else { return nil }
+        guard response == .OK, let url = panel.url else {
+            LoggingService.logInfo("Export cancelled by user", category: .data)
+            return nil
+        }
 
-        try data.write(to: url)
-        return url
+        do {
+            try data.write(to: url)
+            LoggingService.logInfo("Export saved to \(url.path)", category: .data)
+            return url
+        } catch {
+            LoggingService.logError(.exportFailed("Write failed: \(error.localizedDescription)"), context: "exportAll")
+            throw AppError.exportFailed("Failed to write export file: \(error.localizedDescription)")
+        }
     }
 
     private func exportPreferences() -> [String: String] {

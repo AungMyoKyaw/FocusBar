@@ -18,8 +18,10 @@ struct SettingsView: View {
                 .tabItem { Label("Goals", systemImage: "target") }
             dataTab
                 .tabItem { Label("Data", systemImage: "square.and.arrow.up") }
+            aboutTab
+                .tabItem { Label("About", systemImage: "info.circle") }
         }
-        .frame(width: 420, height: 320)
+        .frame(width: 420, height: 340)
         .padding()
     }
 
@@ -27,11 +29,19 @@ struct SettingsView: View {
         Form {
             Section("Focus Duration") {
                 Stepper("Focus: \(viewModel.pomodoroDuration) min", value: $viewModel.pomodoroDuration, in: 1...120)
+                    .accessibilityValue("\(viewModel.pomodoroDuration) minutes")
+                    .accessibilityHint("Adjusts the focus session duration")
                 Stepper("Short Break: \(viewModel.shortBreakDuration) min", value: $viewModel.shortBreakDuration, in: 1...60)
+                    .accessibilityValue("\(viewModel.shortBreakDuration) minutes")
+                    .accessibilityHint("Adjusts the short break duration")
                 Stepper("Long Break: \(viewModel.longBreakDuration) min", value: $viewModel.longBreakDuration, in: 1...120)
+                    .accessibilityValue("\(viewModel.longBreakDuration) minutes")
+                    .accessibilityHint("Adjusts the long break duration")
             }
             Section("Cycle") {
                 Stepper("Sessions until long break: \(viewModel.sessionsUntilLongBreak)", value: $viewModel.sessionsUntilLongBreak, in: 1...12)
+                    .accessibilityValue("\(viewModel.sessionsUntilLongBreak) sessions")
+                    .accessibilityHint("Adjusts how many focus sessions before a long break")
             }
         }
     }
@@ -62,7 +72,32 @@ struct SettingsView: View {
         Form {
             Section("Daily Goal") {
                 Stepper("Pomodoros per day: \(viewModel.dailyGoal)", value: $viewModel.dailyGoal, in: 1...20)
+                    .accessibilityValue("\(viewModel.dailyGoal) pomodoros")
+                    .accessibilityHint("Adjusts the daily focus session goal")
                 Text("Complete this many focus sessions to maintain your streak.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+    }
+
+    private var aboutTab: some View {
+        Form {
+            Section("Application") {
+                LabeledContent("Version", value: Constants.appVersion)
+                    .accessibilityValue("Version \(Constants.appVersion)")
+                LabeledContent("Build", value: Constants.appBuildNumber)
+                    .accessibilityValue("Build \(Constants.appBuildNumber)")
+            }
+            Section("Feedback") {
+                Link("Send Feedback", destination: URL(string: Constants.feedbackURL)!)
+                    .accessibilityHint("Opens your email client to send feedback")
+            }
+            Section("Credits") {
+                Text("FocusBar — A Pomodoro timer for your menu bar.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Text("Built with SwiftUI")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -84,6 +119,7 @@ struct SettingsView: View {
                         )
                     }
                 }
+                .accessibilityHint("Exports all session data to a JSON file")
                 Text("Exports sessions, achievements, stats, and preferences to a JSON file.")
                     .font(.caption)
                     .foregroundStyle(.secondary)

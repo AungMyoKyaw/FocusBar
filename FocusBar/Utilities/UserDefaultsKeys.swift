@@ -22,6 +22,8 @@ enum UserDefaultsKeys {
     static let streakFreezesRemaining = "focusBar.gamification.streakFreezes"
     static let lastFreezeResetWeek = "focusBar.gamification.lastFreezeResetWeek"
     static let dailyGoal = "focusBar.gamification.dailyGoal"
+
+    static let hasCompletedOnboarding = "focusBar.onboarding.hasCompletedOnboarding"
 }
 
 enum MenuBarDisplayMode: String, CaseIterable {

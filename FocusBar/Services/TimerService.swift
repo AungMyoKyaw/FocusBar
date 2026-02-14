@@ -22,6 +22,7 @@ final class TimerService {
     private var timer: Timer?
     private var totalDurationSeconds: Int = 0
 
+    private var lastStateChangeDate: Date = .distantPast
     private var sleepObserver: NSObjectProtocol?
     private var wakeObserver: NSObjectProtocol?
 
@@ -36,6 +37,12 @@ final class TimerService {
     }
 
     func start(duration: Int? = nil) {
+        guard Date().timeIntervalSince(lastStateChangeDate) >= 0.3 else {
+            LoggingService.logDebug("Rapid input ignored for start", category: .timer)
+            return
+        }
+        lastStateChangeDate = Date()
+
         switch state {
         case .idle:
             let durationMinutes = duration ?? durationForCurrentType()
@@ -43,12 +50,14 @@ final class TimerService {
             remainingSeconds = totalDurationSeconds
             sessionStartDate = Date()
             state = .running
+            LoggingService.logInfo("Timer started for \(currentSessionType) (\(durationMinutes) min)", category: .timer)
             startTimer()
 
         case .paused:
             let elapsed = totalDurationSeconds - pausedRemainingSeconds
             sessionStartDate = Date().addingTimeInterval(-Double(elapsed))
             state = .running
+            LoggingService.logInfo("Timer resumed for \(currentSessionType)", category: .timer)
             startTimer()
 
         case .running:
@@ -58,12 +67,24 @@ final class TimerService {
 
     func pause() {
         guard state == .running else { return }
+        guard Date().timeIntervalSince(lastStateChangeDate) >= 0.3 else {
+            LoggingService.logDebug("Rapid input ignored for pause", category: .timer)
+            return
+        }
+        lastStateChangeDate = Date()
         pausedRemainingSeconds = remainingSeconds
         state = .paused
+        LoggingService.logInfo("Timer paused for \(currentSessionType)", category: .timer)
         stopTimer()
     }
 
     func reset() {
+        guard Date().timeIntervalSince(lastStateChangeDate) >= 0.3 else {
+            LoggingService.logDebug("Rapid input ignored for reset", category: .timer)
+            return
+        }
+        lastStateChangeDate = Date()
+        LoggingService.logInfo("Timer reset for \(currentSessionType)", category: .timer)
         stopTimer()
         state = .idle
         remainingSeconds = 0
@@ -74,6 +95,7 @@ final class TimerService {
     func skip() {
         let completedType = currentSessionType
         let completedDuration = totalDurationSeconds
+        LoggingService.logInfo("Timer skipped for \(completedType)", category: .timer)
         stopTimer()
         state = .idle
         remainingSeconds = 0
@@ -118,6 +140,7 @@ final class TimerService {
         if remainingSeconds <= 0 {
             let completedType = currentSessionType
             let completedDuration = totalDurationSeconds
+            LoggingService.logInfo("Session complete: \(completedType) (\(completedDuration)s)", category: .timer)
             stopTimer()
             state = .idle
             remainingSeconds = 0
@@ -151,6 +174,7 @@ final class TimerService {
     }
 
     func advanceToNextSession() {
+        LoggingService.logDebug("Advancing from \(currentSessionType), cycle: \(completedPomodorosInCycle)", category: .timer)
         let sessionsUntilLong = UserDefaults.standard.integer(forKey: UserDefaultsKeys.sessionsUntilLongBreak)
         let maxSessions = sessionsUntilLong > 0 ? sessionsUntilLong : Constants.defaultSessionsUntilLongBreak
 

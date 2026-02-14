@@ -21,8 +21,10 @@ final class NotificationService {
         do {
             let granted = try await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge])
             await MainActor.run { isAuthorized = granted }
+            LoggingService.logInfo("Notification permission \(granted ? "granted" : "denied")", category: .permissions)
             return granted
         } catch {
+            LoggingService.logError(.permissionDenied(.notifications), context: "requestPermission failed: \(error.localizedDescription)")
             return false
         }
     }
@@ -34,6 +36,7 @@ final class NotificationService {
         content.sound = UserDefaults.standard.bool(forKey: UserDefaultsKeys.soundEnabled) ? .default : nil
 
         let request = UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil)
+        LoggingService.logInfo("Sending notification: \(content.title)", category: .timer)
         UNUserNotificationCenter.current().add(request)
     }
 
@@ -44,6 +47,7 @@ final class NotificationService {
         content.sound = .default
 
         let request = UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil)
+        LoggingService.logInfo("Sending notification: \(content.title)", category: .gamification)
         UNUserNotificationCenter.current().add(request)
     }
 
@@ -54,6 +58,7 @@ final class NotificationService {
         content.sound = .default
 
         let request = UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil)
+        LoggingService.logInfo("Sending notification: \(content.title)", category: .gamification)
         UNUserNotificationCenter.current().add(request)
     }
 
@@ -64,6 +69,7 @@ final class NotificationService {
         content.sound = .default
 
         let request = UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil)
+        LoggingService.logInfo("Sending notification: \(content.title)", category: .gamification)
         UNUserNotificationCenter.current().add(request)
     }
 }

@@ -24,6 +24,8 @@ final class GamificationService {
         let goalBonus = dailyGoalJustMet ? Constants.dailyGoalBonusXP : 0
         let total = Int(adjustedXP.rounded()) + goalBonus
 
+        LoggingService.logInfo("XP awarded: \(total) (base: \(baseXP), streak: \(streakMult)x, level: \(levelMult)x, bonus: \(goalBonus))", category: .gamification)
+
         return XPResult(
             baseXP: baseXP,
             streakMultiplier: streakMult,
@@ -94,6 +96,7 @@ final class GamificationService {
         for (id, met) in conditions {
             if met && !alreadyUnlocked.contains(id) {
                 if let def = Constants.achievements.first(where: { $0.id == id }) {
+                    LoggingService.logInfo("Achievement unlocked: \(def.title) (+\(def.xpBonus) XP)", category: .gamification)
                     unlocks.append(AchievementUnlock(achievementId: id, title: def.title, xpBonus: def.xpBonus))
                 }
             }

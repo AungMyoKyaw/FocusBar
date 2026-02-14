@@ -23,6 +23,7 @@ struct AchievementsView: View {
                 Text("\(unlockedAchievements.count)/\(Constants.achievements.count) unlocked")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
+                    .accessibilityLabel("\(unlockedAchievements.count) of \(Constants.achievements.count) achievements unlocked")
 
                 ForEach(categories, id: \.self) { category in
                     achievementSection(for: category)
@@ -70,6 +71,8 @@ struct AchievementsView: View {
                         .foregroundStyle(unlocked ? .green : .secondary)
                 }
                 .padding(.vertical, 4)
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel("\(def.title), \(def.description), \(unlocked ? "Unlocked" : "Locked"), \(def.xpBonus) XP bonus")
             }
         }
     }

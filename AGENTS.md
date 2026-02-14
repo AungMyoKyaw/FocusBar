@@ -40,6 +40,7 @@ FocusBar/
 ├── App/
 │   └── FocusBarApp.swift              # @main, MenuBarExtra, ModelContainer, Window scenes
 ├── Models/
+│   ├── AppError.swift                # Error enum: dataError, permissionDenied, exportFailed, unknown
 │   ├── Session.swift                  # @Model — focus/break session record
 │   ├── Achievement.swift              # @Model — unlocked achievements
 │   ├── DailyStats.swift               # @Model — daily aggregates
@@ -49,13 +50,14 @@ FocusBar/
 │   ├── GamificationViewModel.swift    # XP, levels, streaks, achievements
 │   ├── StatsViewModel.swift           # Statistics queries and aggregation
 │   ├── SettingsViewModel.swift        # @AppStorage preferences binding
-│   └── RemindersViewModel.swift       # EventKit integration
+│   ├── RemindersViewModel.swift       # EventKit integration
+│   └── OnboardingViewModel.swift      # Onboarding flow state, permission requests
 ├── Views/
 │   ├── MenuBar/
 │   │   ├── MenuBarView.swift          # Main dropdown: timer, controls, XP, navigation
 │   │   └── TimerDisplayView.swift     # Menu bar label: countdown / progress bar / icon
 │   ├── Settings/
-│   │   └── SettingsView.swift         # Tabbed preferences + data export
+│   │   └── SettingsView.swift         # Tabbed preferences + data export + About tab
 │   ├── Stats/
 │   │   ├── StatsView.swift            # Statistics dashboard with summary cards
 │   │   └── ChartViews.swift           # Swift Charts: focus by hour, task breakdown
@@ -63,20 +65,27 @@ FocusBar/
 │   │   └── AchievementsView.swift     # Achievement grid grouped by category
 │   └── Components/
 │       ├── ReminderPicker.swift       # Searchable reminder dropdown + quick add
-│       └── XPProgressView.swift       # XP bar, level badge, streak counter
+│       ├── XPProgressView.swift       # XP bar, level badge, streak counter
+│       └── ErrorBannerView.swift      # Auto-dismiss error banner (5s)
 ├── Services/
-│   ├── TimerService.swift             # Date-based timer, sleep/wake handling
+│   ├── TimerService.swift             # Date-based timer, sleep/wake handling, 300ms debounce
 │   ├── GamificationService.swift      # XP calculation, achievement evaluation
 │   ├── NotificationService.swift      # UNUserNotificationCenter wrapper
-│   ├── ReminderService.swift          # EventKit wrapper (lazy auth)
+│   ├── ReminderService.swift          # EventKit wrapper (lazy auth, #available deprecation fix)
 │   ├── ExportService.swift            # JSON export with NSSavePanel
-│   └── StreakService.swift            # Daily streak logic, freeze management
+│   ├── StreakService.swift            # Daily streak logic, freeze management
+│   └── LoggingService.swift           # OSLog Logger with 6 categories
 ├── Utilities/
-│   ├── Constants.swift                # 30-level XP table, 20 achievement definitions
-│   └── UserDefaultsKeys.swift         # Type-safe keys + MenuBarDisplayMode enum
+│   ├── Constants.swift                # 30-level XP table, 20 achievement definitions, app metadata
+│   └── UserDefaultsKeys.swift         # Type-safe keys + MenuBarDisplayMode enum + hasCompletedOnboarding
 ├── Resources/
 │   ├── Assets.xcassets/               # App icon, accent color
 │   └── Sounds/                        # Notification sound files
+├── Views/Onboarding/
+│   ├── OnboardingContainerView.swift  # Step indicator + navigation (480×560 window)
+│   ├── WelcomeStepView.swift          # Step 1: app intro, feature highlights
+│   ├── PermissionsStepView.swift      # Step 2: notification/reminder permissions
+│   └── ReadyStepView.swift            # Step 3: summary + Get Started
 └── FocusBar.entitlements              # Sandbox + Reminders permission
 
 FocusBarTests/                         # Unit tests (Swift Testing framework)
@@ -91,6 +100,16 @@ specs/001-focusbar-pomodoro-app/       # Feature specification artifacts
 ├── quickstart.md                      # Development setup guide
 ├── tasks.md                           # 57 implementation tasks (all complete)
 └── checklists/requirements.md         # Quality checklist (16/16 pass)
+
+specs/003-launch-readiness/            # Launch readiness feature spec
+├── spec.md                            # 3 user stories (onboarding, errors, accessibility)
+├── plan.md                            # Architecture & file structure
+├── research.md                        # 9 research items (OSLog, AppError, etc.)
+├── data-model.md                      # State definitions (no new SwiftData models)
+├── contracts/services.md              # Updated service contracts
+├── quickstart.md                      # Build/test commands
+├── tasks.md                           # 33 tasks in 5 phases
+└── checklists/requirements.md         # Quality checklist
 ```
 
 ## Build Targets
@@ -128,7 +147,28 @@ specs/001-focusbar-pomodoro-app/       # Feature specification artifacts
 - Streak freeze: 1 per ISO week, auto-applied
 
 ### Service Contracts
-All services have protocol-style interfaces documented in `specs/001-focusbar-pomodoro-app/contracts/services.md`.
+All services have protocol-style interfaces documented in `specs/001-focusbar-pomodoro-app/contracts/services.md`. Updated contracts for error throwing and logging in `specs/003-launch-readiness/contracts/services.md`.
+
+### Logging Architecture
+- OSLog `Logger` with subsystem `com.aungmyokyaw.FocusBar` and 6 categories
+- Static `LoggingService` enum with `logError`, `logInfo`, `logDebug` methods
+- All services log operations at info/debug level, errors at error level
+
+### Error Handling
+- `AppError` enum thrown by services, caught at ViewModel boundary
+- `ErrorBannerView` displays errors with auto-dismiss (5 seconds)
+- ViewModels expose `currentError: AppError?` for banner binding
+
+### Onboarding
+- 3-step flow: Welcome → Permissions → Ready
+- Standalone `Window` scene (not sheet on MenuBarExtra)
+- `OnboardingViewModel` manages step navigation and permission requests
+- `@AppStorage("hasCompletedOnboarding")` gate prevents re-showing
+
+### Accessibility
+- All interactive elements have `.accessibilityLabel` and `.accessibilityHint`
+- Composite elements use `.accessibilityElement(children: .combine)`
+- All colors are semantic (`.primary`, `.secondary`, `.green`, `.orange`, `.blue`)
 
 ## Configuration
 
@@ -159,6 +199,9 @@ All services have protocol-style interfaces documented in `specs/001-focusbar-po
 2. **SwiftData + @AppStorage Split**: Structured data (sessions, achievements) in SwiftData; scalar prefs (XP, level, streak) in UserDefaults via `@AppStorage`
 3. **EventKit Lazy Auth**: Reminders permission requested only when user first accesses task linking, not at launch
 4. **Timer Accuracy**: Uses `Date`-based elapsed time, not tick counting — survives sleep/wake
-5. **ModelContainer Setup**: Configured once in `FocusBarApp`, passed to all scenes via `.modelContainer()`
+5. **ModelContainer Setup**: Configured once in `FocusBarApp`, passed to all scenes via `.modelContainer()`. Falls back to in-memory store on creation failure.
 6. **Test Framework Split**: Unit tests use Swift Testing (`@Test`, `#expect`), UI tests use XCTest — don't mix
 7. **Xcode File Sync**: Project uses `PBXFileSystemSynchronizedRootGroup` — new files in FocusBar/ are auto-included
+8. **Onboarding Window**: Opens via `OpenWindowAction` only when `hasCompletedOnboarding` is false. Separate `Window` scene, not a sheet.
+9. **EventKit Deprecation**: `EKAuthorizationStatus.authorized` deprecated in macOS 14 — use `#available(macOS 14, *)` branching with `.fullAccess`
+10. **Timer Debounce**: 300ms guard via `lastStateChangeDate` on TimerService prevents rapid double-taps
