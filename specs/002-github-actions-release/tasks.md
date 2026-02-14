@@ -152,5 +152,5 @@
 - `release.yml`: Runs only on tag push (`v*`) → creates GitHub Release with artifact
 
 **How to Test**:
-- Test build workflow: `git push origin main`
+- Test build workflow: `git push origin master`
 - Test release workflow: `git tag v0.0.1-test && git push origin v0.0.1-test`
