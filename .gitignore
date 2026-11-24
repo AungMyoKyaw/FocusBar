@@ -22,3 +22,5 @@ Packages/
 Thumbs.db
 *.tmp
 *.swp
+*.profraw
+.humancraft-baseline.json
