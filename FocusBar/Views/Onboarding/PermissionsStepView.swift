@@ -50,14 +50,12 @@ struct PermissionsStepView: View {
 
             Spacer()
 
-            Button(action: onContinue) {
-                Text("Continue")
-                    .frame(maxWidth: .infinity)
-            }
-            .buttonStyle(.borderedProminent)
-            .controlSize(.large)
-            .accessibilityLabel("Continue to summary")
-            .accessibilityHint("Moves to the final onboarding step")
+            OnboardingPrimaryButton(
+                title: "Continue",
+                accessibilityLabel: "Continue to summary",
+                accessibilityHint: "Moves to the final onboarding step",
+                action: onContinue
+            )
         }
         .padding(32)
     }
@@ -111,18 +109,8 @@ private struct PermissionCard: View {
                     .controlSize(.small)
                     .accessibilityHint("Requests permission for \(title)")
             }
-        case .granted:
-            Label("Enabled", systemImage: "checkmark.circle.fill")
-                .foregroundStyle(.green)
-                .font(.caption)
-        case .denied:
-            Label("Denied", systemImage: "xmark.circle.fill")
-                .foregroundStyle(.red)
-                .font(.caption)
-        case .skipped:
-            Label("Skipped", systemImage: "minus.circle.fill")
-                .foregroundStyle(.secondary)
-                .font(.caption)
+        case .granted, .denied, .skipped:
+            PermissionStatusBadge(status: status)
         }
     }
 }

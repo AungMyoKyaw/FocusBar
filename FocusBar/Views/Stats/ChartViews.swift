@@ -10,7 +10,8 @@ struct FocusByHourChart: View {
                 x: .value("Hour", item.hour),
                 y: .value("Sessions", item.count)
             )
-            .foregroundStyle(.green.gradient)
+            .foregroundStyle(FocusBarTheme.focusAccent.gradient)
+            .cornerRadius(3)
         }
         .chartXAxisLabel("Hour of Day")
         .chartYAxisLabel("Sessions")
@@ -28,7 +29,8 @@ struct TaskBreakdownChart: View {
                 x: .value("Minutes", item.minutes),
                 y: .value("Task", item.title)
             )
-            .foregroundStyle(.blue.gradient)
+            .foregroundStyle(FocusBarTheme.longBreakAccent.gradient)
+            .cornerRadius(3)
         }
         .chartXAxisLabel("Focus Minutes")
         .accessibilityElement(children: .combine)

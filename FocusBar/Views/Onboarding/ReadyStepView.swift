@@ -37,14 +37,12 @@ struct ReadyStepView: View {
 
             Spacer()
 
-            Button(action: onGetStarted) {
-                Text("Get Started")
-                    .frame(maxWidth: .infinity)
-            }
-            .buttonStyle(.borderedProminent)
-            .controlSize(.large)
-            .accessibilityLabel("Get started with FocusBar")
-            .accessibilityHint("Closes onboarding and opens the app")
+            OnboardingPrimaryButton(
+                title: "Get Started",
+                accessibilityLabel: "Get started with FocusBar",
+                accessibilityHint: "Closes onboarding and opens the app",
+                action: onGetStarted
+            )
         }
         .padding(32)
     }
@@ -59,26 +57,8 @@ private struct SummaryRow: View {
             Text(title)
                 .fontWeight(.medium)
             Spacer()
-            statusLabel
+            PermissionStatusBadge(status: status)
         }
         .accessibilityElement(children: .combine)
-    }
-
-    @ViewBuilder
-    private var statusLabel: some View {
-        switch status {
-        case .granted:
-            Label("Enabled", systemImage: "checkmark.circle.fill")
-                .foregroundStyle(.green)
-        case .denied:
-            Label("Denied", systemImage: "xmark.circle.fill")
-                .foregroundStyle(.red)
-        case .skipped:
-            Label("Skipped", systemImage: "minus.circle.fill")
-                .foregroundStyle(.secondary)
-        case .unknown:
-            Label("Not Set", systemImage: "questionmark.circle.fill")
-                .foregroundStyle(.secondary)
-        }
     }
 }

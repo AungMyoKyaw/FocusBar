@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftData
+import AppKit
 
 struct SettingsView: View {
     @Environment(\.modelContext) private var modelContext
@@ -23,31 +24,35 @@ struct SettingsView: View {
             aboutTab
                 .tabItem { Label("About", systemImage: "info.circle") }
         }
-        .frame(width: 420, height: 340)
-        .padding()
+        .frame(width: 480, height: 380)
     }
 
     private var timerTab: some View {
         Form {
-            Section("Focus Duration") {
+            Section("Session Durations") {
                 Stepper("Focus: \(viewModel.pomodoroDuration) min", value: $viewModel.pomodoroDuration, in: 1...120)
+                    .monospacedDigit()
                     .accessibilityValue("\(viewModel.pomodoroDuration) minutes")
                     .accessibilityHint("Adjusts the focus session duration")
                 Stepper("Short Break: \(viewModel.shortBreakDuration) min", value: $viewModel.shortBreakDuration, in: 1...60)
+                    .monospacedDigit()
                     .accessibilityValue("\(viewModel.shortBreakDuration) minutes")
                     .accessibilityHint("Adjusts the short break duration")
                 Stepper("Long Break: \(viewModel.longBreakDuration) min", value: $viewModel.longBreakDuration, in: 1...120)
+                    .monospacedDigit()
                     .accessibilityValue("\(viewModel.longBreakDuration) minutes")
                     .accessibilityHint("Adjusts the long break duration")
             }
             Section("Cycle") {
                 Stepper("Sessions until long break: \(viewModel.sessionsUntilLongBreak)", value: $viewModel.sessionsUntilLongBreak, in: 1...12)
+                    .monospacedDigit()
                     .accessibilityValue("\(viewModel.sessionsUntilLongBreak) sessions")
                     .accessibilityHint("Adjusts how many focus sessions before a long break")
                 Toggle("Auto-start next session", isOn: $viewModel.autoStartNextSession)
                     .accessibilityHint("Automatically starts the next focus or break session when one completes")
             }
         }
+        .formStyle(.grouped)
     }
 
     private var notificationsTab: some View {
@@ -57,6 +62,7 @@ struct SettingsView: View {
                 Toggle("Sound", isOn: $viewModel.soundEnabled)
             }
         }
+        .formStyle(.grouped)
     }
 
     private var displayTab: some View {
@@ -81,42 +87,57 @@ struct SettingsView: View {
                 }
             }
         }
+        .formStyle(.grouped)
     }
 
     private var goalsTab: some View {
         Form {
             Section("Daily Goal") {
                 Stepper("Pomodoros per day: \(viewModel.dailyGoal)", value: $viewModel.dailyGoal, in: 1...20)
+                    .monospacedDigit()
                     .accessibilityValue("\(viewModel.dailyGoal) pomodoros")
                     .accessibilityHint("Adjusts the daily focus session goal")
-                Text("Complete this many focus sessions to maintain your streak.")
+                Text("Complete this many focus sessions to maintain your daily streak.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
         }
+        .formStyle(.grouped)
     }
 
     private var aboutTab: some View {
         Form {
-            Section("Application") {
-                LabeledContent("Version", value: Constants.appVersion)
-                    .accessibilityValue("Version \(Constants.appVersion)")
-                LabeledContent("Build", value: Constants.appBuildNumber)
-                    .accessibilityValue("Build \(Constants.appBuildNumber)")
+            Section {
+                HStack(spacing: 14) {
+                    if let icon = NSApp.applicationIconImage {
+                        Image(nsImage: icon)
+                            .resizable()
+                            .frame(width: 48, height: 48)
+                    }
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("FocusBar")
+                            .font(.headline)
+                        Text("Version \(Constants.appVersion) (\(Constants.appBuildNumber))")
+                            .font(.caption)
+                            .monospacedDigit()
+                            .foregroundStyle(.secondary)
+                        Text("MIT License")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .padding(.vertical, 4)
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel("FocusBar version \(Constants.appVersion) build \(Constants.appBuildNumber), MIT License")
             }
-            Section("Feedback") {
-                Link("Send Feedback", destination: URL(string: Constants.feedbackURL)!)
-                    .accessibilityHint("Opens FocusBar GitHub Issues in your browser")
-            }
-            Section("Credits") {
-                Text("FocusBar — A Pomodoro timer for your menu bar.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                Text("Built with SwiftUI")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+            Section("Support") {
+                if let feedbackURL = URL(string: Constants.feedbackURL) {
+                    Link("Report an Issue on GitHub", destination: feedbackURL)
+                        .accessibilityHint("Opens FocusBar GitHub Issues in your browser")
+                }
             }
         }
+        .formStyle(.grouped)
     }
 
     private var dataTab: some View {
@@ -158,10 +179,11 @@ struct SettingsView: View {
                         .foregroundStyle(.red)
                 }
 
-                Text("Exports sessions, achievements, stats, and preferences to a JSON file.")
+                Text("Exports sessions, achievements, daily stats, and preferences to a JSON file.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
         }
+        .formStyle(.grouped)
     }
 }

@@ -4,46 +4,35 @@ struct ErrorBannerView: View {
     let error: AppError
     let onDismiss: () -> Void
 
-    @State private var isVisible = true
-
     var body: some View {
-        if isVisible {
-            HStack(spacing: 8) {
-                Image(systemName: "exclamationmark.triangle.fill")
-                    .foregroundStyle(.yellow)
+        HStack(spacing: 8) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .foregroundStyle(.orange)
 
-                Text(error.localizedDescription)
-                    .font(.caption)
-                    .lineLimit(2)
+            Text(error.localizedDescription)
+                .font(.caption)
+                .lineLimit(2)
 
-                Spacer()
+            Spacer()
 
-                Button(action: dismiss) {
-                    Image(systemName: "xmark")
-                        .font(.caption2)
-                }
-                .buttonStyle(.plain)
+            Button(action: onDismiss) {
+                Image(systemName: "xmark")
+                    .font(.caption2)
             }
-            .padding(8)
-            .background(.ultraThinMaterial)
-            .clipShape(RoundedRectangle(cornerRadius: 8))
-            .padding(.horizontal, 8)
-            .transition(.move(edge: .top).combined(with: .opacity))
-            .onAppear {
-                DispatchQueue.main.asyncAfter(deadline: .now() + 5) {
-                    dismiss()
-                }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Dismiss error")
+        }
+        .padding(8)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 8))
+        .transition(.move(edge: .top).combined(with: .opacity))
+        .task(id: error.localizedDescription) {
+            try? await Task.sleep(for: .seconds(5))
+            if !Task.isCancelled {
+                onDismiss()
             }
-            .accessibilityElement(children: .combine)
-            .accessibilityLabel("Error: \(error.localizedDescription)")
-            .accessibilityHint("Tap dismiss to close")
         }
-    }
-
-    private func dismiss() {
-        withAnimation {
-            isVisible = false
-        }
-        onDismiss()
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Error: \(error.localizedDescription)")
+        .accessibilityHint("Press to dismiss")
     }
 }

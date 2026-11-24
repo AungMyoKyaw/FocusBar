@@ -1,4 +1,5 @@
 import Foundation
+import SwiftData
 import Testing
 @testable import FocusBar
 
@@ -232,5 +233,75 @@ struct ExportServiceTests {
         #expect(decoded.achievements.first?.type == "first_focus")
         #expect(decoded.dailyStats.count == 1)
         #expect(decoded.dailyStats.first?.pomodorosCompleted == 1)
+    }
+}
+
+@MainActor
+struct StatsViewModelTests {
+
+    @Test func loadStatsAggregatesOnlyCompletedPomodorosForTasks() throws {
+        let schema = Schema([Session.self, DailyStats.self, Achievement.self])
+        let config = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
+        let container = try ModelContainer(for: schema, configurations: [config])
+        let context = container.mainContext
+
+        let dayStart = Calendar.current.startOfDay(for: Date())
+        let focus1 = Session(startTime: dayStart.addingTimeInterval(3600), duration: 1500, type: .pomodoro, completed: true, reminderId: "r1", reminderTitle: "Write tests", xpEarned: 25)
+        let focus2 = Session(startTime: dayStart.addingTimeInterval(5400), duration: 1800, type: .pomodoro, completed: true, reminderId: "r1", reminderTitle: "Write tests", xpEarned: 25)
+        let shortBreak = Session(startTime: dayStart.addingTimeInterval(7200), duration: 300, type: .shortBreak, completed: true, xpEarned: 5)
+        let incomplete = Session(startTime: dayStart.addingTimeInterval(7500), duration: 1500, type: .pomodoro, completed: false, xpEarned: 0)
+
+        let stats = DailyStats(date: dayStart)
+        stats.pomodorosCompleted = 2
+
+        context.insert(focus1)
+        context.insert(focus2)
+        context.insert(shortBreak)
+        context.insert(incomplete)
+        context.insert(stats)
+        try context.save()
+
+        let vm = StatsViewModel()
+        vm.timeRange = .daily
+        vm.loadStats(modelContext: context)
+
+        #expect(vm.currentError == nil)
+        #expect(vm.totalSessions == 2)
+        #expect(abs(vm.totalFocusHours - (3300.0 / 3600.0)) < 0.001)
+        #expect(vm.averageSessionMinutes == 27)
+        #expect(vm.bestDayPomodoros == 2)
+        #expect(vm.taskBreakdown.count == 1)
+        #expect(vm.taskBreakdown.first?.title == "Write tests")
+        #expect(vm.taskBreakdown.first?.minutes == 55)
+    }
+}
+
+@MainActor
+struct TimerViewModelTests {
+
+    @Test func menuBarTitleAndSystemImageReflectStateWithoutEmoji() throws {
+        let suiteName = "FocusBarTests.TimerVM.\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        let service = TimerService(defaults: defaults, debounceInterval: 0)
+        let vm = TimerViewModel(timerService: service)
+
+        #expect(vm.menuBarTitle.isEmpty)
+        #expect(vm.menuBarSystemImage == "timer")
+        #expect(vm.sessionProgress == 0)
+
+        service.start(duration: 25)
+        #expect(vm.menuBarTitle == "25:00")
+        #expect(vm.menuBarSystemImage == "timer")
+        #expect(vm.sessionProgress >= 0 && vm.sessionProgress <= 1)
+
+        vm.pause()
+        #expect(vm.menuBarSystemImage == "pause.circle")
+        #expect(vm.menuBarTitle == "25:00")
+
+        vm.skip()
+        #expect(vm.menuBarTitle.isEmpty)
+        #expect(vm.currentSessionType == .shortBreak)
     }
 }

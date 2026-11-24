@@ -2,20 +2,27 @@ import SwiftUI
 
 struct TimerDisplayView: View {
     let timerViewModel: TimerViewModel
-    @AppStorage(UserDefaultsKeys.menuBarDisplayMode) private var displayMode = "timerText"
+    @AppStorage(UserDefaultsKeys.menuBarDisplayMode) private var displayMode = MenuBarDisplayMode.timerText.rawValue
 
     var body: some View {
         switch displayMode {
-        case "progressBar":
+        case MenuBarDisplayMode.progressBar.rawValue:
             progressBarLabel
                 .accessibilityElement(children: .combine)
                 .accessibilityLabel(timerAccessibilityLabel)
-        case "icon":
-            Image(systemName: iconName)
+        case MenuBarDisplayMode.icon.rawValue:
+            Image(systemName: timerViewModel.menuBarSystemImage)
                 .accessibilityLabel(timerAccessibilityLabel)
         default:
-            Text(timerViewModel.menuBarTitle)
-                .accessibilityLabel(timerAccessibilityLabel)
+            HStack(spacing: 4) {
+                Image(systemName: timerViewModel.menuBarSystemImage)
+                if !timerViewModel.menuBarTitle.isEmpty {
+                    Text(timerViewModel.menuBarTitle)
+                        .monospacedDigit()
+                }
+            }
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel(timerAccessibilityLabel)
         }
     }
 
@@ -30,35 +37,13 @@ struct TimerDisplayView: View {
         }
     }
 
-    private var iconName: String {
-        switch timerViewModel.timerState {
-        case .idle: return "timer"
-        case .running: return "timer.circle.fill"
-        case .paused: return "pause.circle"
-        }
-    }
-
     private var progressBarLabel: some View {
-        HStack(spacing: 2) {
-            Image(systemName: iconName)
+        HStack(spacing: 4) {
+            Image(systemName: timerViewModel.menuBarSystemImage)
             if timerViewModel.timerState != .idle {
-                ProgressView(value: progress)
+                ProgressView(value: timerViewModel.sessionProgress)
                     .frame(width: 40)
             }
         }
-    }
-
-    private var progress: Double {
-        guard timerViewModel.timerState != .idle else { return 0 }
-        let durationKey: String
-        switch timerViewModel.currentSessionType {
-        case .pomodoro: durationKey = UserDefaultsKeys.pomodoroDuration
-        case .shortBreak: durationKey = UserDefaultsKeys.shortBreakDuration
-        case .longBreak: durationKey = UserDefaultsKeys.longBreakDuration
-        }
-        let totalMinutes = UserDefaults.standard.integer(forKey: durationKey)
-        let totalSeconds = (totalMinutes > 0 ? totalMinutes : timerViewModel.currentSessionType.defaultDurationMinutes) * 60
-        guard totalSeconds > 0 else { return 0 }
-        return 1.0 - (Double(timerViewModel.remainingSeconds) / Double(totalSeconds))
     }
 }
