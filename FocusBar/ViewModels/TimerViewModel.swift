@@ -20,20 +20,47 @@ final class TimerViewModel {
         return String(format: "%02d:%02d", minutes, seconds)
     }
 
-    var menuBarTitle: String {
-        if timerState == .idle {
-            return "🍅"
-        }
-        let icon: String
+    var configuredDurationSeconds: Int {
+        let durationKey: String
         switch currentSessionType {
-        case .pomodoro: icon = "🍅"
-        case .shortBreak: icon = "☕"
-        case .longBreak: icon = "🌿"
+        case .pomodoro: durationKey = UserDefaultsKeys.pomodoroDuration
+        case .shortBreak: durationKey = UserDefaultsKeys.shortBreakDuration
+        case .longBreak: durationKey = UserDefaultsKeys.longBreakDuration
         }
-        if timerState == .paused {
-            return "\(icon) ⏸"
+        let minutes = UserDefaults.standard.integer(forKey: durationKey)
+        return (minutes > 0 ? minutes : currentSessionType.defaultDurationMinutes) * 60
+    }
+
+    var configuredDurationFormatted: String {
+        let total = configuredDurationSeconds
+        return String(format: "%02d:%02d", total / 60, total % 60)
+    }
+
+    var sessionProgress: Double {
+        guard timerState != .idle else { return 0 }
+        let total = configuredDurationSeconds
+        guard total > 0 else { return 0 }
+        let ratio = 1.0 - (Double(remainingSeconds) / Double(total))
+        return min(max(ratio, 0), 1)
+    }
+
+    var menuBarSystemImage: String {
+        switch timerState {
+        case .idle:
+            return "timer"
+        case .paused:
+            return "pause.circle"
+        case .running:
+            switch currentSessionType {
+            case .pomodoro: return "timer"
+            case .shortBreak: return "cup.and.saucer.fill"
+            case .longBreak: return "leaf.fill"
+            }
         }
-        return "\(icon) \(formattedTime)"
+    }
+
+    var menuBarTitle: String {
+        timerState == .idle ? "" : formattedTime
     }
 
     var modelContext: ModelContext?
@@ -157,12 +184,17 @@ final class TimerViewModel {
     private func loadDailyPomodoroCount() {
         guard let modelContext else { return }
         let today = Calendar.current.startOfDay(for: Date())
-        let tomorrow = Calendar.current.date(byAdding: .day, value: 1, to: today)!
+        let tomorrow = Calendar.current.date(byAdding: .day, value: 1, to: today) ?? today.addingTimeInterval(86_400)
         let pomodoroType = SessionType.pomodoro.rawValue
 
         let descriptor = FetchDescriptor<Session>(
             predicate: #Predicate { $0.startTime >= today && $0.startTime < tomorrow && $0.completed == true && $0.type == pomodoroType }
         )
-        dailyPomodoroCount = (try? modelContext.fetch(descriptor).count) ?? 0
+        do {
+            dailyPomodoroCount = try modelContext.fetch(descriptor).count
+        } catch {
+            LoggingService.logError(.dataError("Failed to load daily pomodoro count: \(error.localizedDescription)"), context: "loadDailyPomodoroCount")
+            dailyPomodoroCount = 0
+        }
     }
 }

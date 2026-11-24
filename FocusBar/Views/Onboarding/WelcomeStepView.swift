@@ -30,14 +30,12 @@ struct WelcomeStepView: View {
 
             Spacer()
 
-            Button(action: onContinue) {
-                Text("Continue")
-                    .frame(maxWidth: .infinity)
-            }
-            .buttonStyle(.borderedProminent)
-            .controlSize(.large)
-            .accessibilityLabel("Continue to permissions")
-            .accessibilityHint("Moves to the next onboarding step")
+            OnboardingPrimaryButton(
+                title: "Continue",
+                accessibilityLabel: "Continue to permissions",
+                accessibilityHint: "Moves to the next onboarding step",
+                action: onContinue
+            )
         }
         .padding(32)
     }

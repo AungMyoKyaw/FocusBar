@@ -42,3 +42,46 @@ struct OnboardingContainerView: View {
         .padding(.horizontal, 32)
     }
 }
+
+struct OnboardingPrimaryButton: View {
+    let title: String
+    let accessibilityLabel: String
+    let accessibilityHint: String
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Text(title)
+                .frame(maxWidth: .infinity)
+        }
+        .buttonStyle(.borderedProminent)
+        .controlSize(.large)
+        .accessibilityLabel(accessibilityLabel)
+        .accessibilityHint(accessibilityHint)
+    }
+}
+
+struct PermissionStatusBadge: View {
+    let status: PermissionStatus
+
+    var body: some View {
+        switch status {
+        case .granted:
+            Label("Enabled", systemImage: "checkmark.circle.fill")
+                .foregroundStyle(.green)
+                .font(.caption)
+        case .denied:
+            Label("Denied", systemImage: "xmark.circle.fill")
+                .foregroundStyle(.red)
+                .font(.caption)
+        case .skipped:
+            Label("Skipped", systemImage: "minus.circle.fill")
+                .foregroundStyle(.secondary)
+                .font(.caption)
+        case .unknown:
+            Label("Not Set", systemImage: "questionmark.circle.fill")
+                .foregroundStyle(.secondary)
+                .font(.caption)
+        }
+    }
+}

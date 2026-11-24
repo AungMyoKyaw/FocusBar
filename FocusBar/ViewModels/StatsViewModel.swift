@@ -6,6 +6,7 @@ final class StatsViewModel {
     var timeRange: TimeRange = .weekly
     var sessions: [Session] = []
     var dailyStats: [DailyStats] = []
+    var currentError: AppError?
 
     enum TimeRange: String, CaseIterable {
         case daily = "Today"
@@ -14,6 +15,7 @@ final class StatsViewModel {
     }
 
     func loadStats(modelContext: ModelContext) {
+        currentError = nil
         let startDate: Date
         let now = Date()
         let cal = Calendar.current
@@ -31,25 +33,42 @@ final class StatsViewModel {
             predicate: #Predicate { $0.startTime >= startDate && $0.completed == true },
             sortBy: [SortDescriptor(\.startTime, order: .reverse)]
         )
-        sessions = (try? modelContext.fetch(sessionDescriptor)) ?? []
+        do {
+            sessions = try modelContext.fetch(sessionDescriptor)
+        } catch {
+            let appError = AppError.dataError("Failed to load sessions: \(error.localizedDescription)")
+            LoggingService.logError(appError, context: "StatsViewModel.loadStats")
+            currentError = appError
+            sessions = []
+        }
 
         let statsDescriptor = FetchDescriptor<DailyStats>(
             predicate: #Predicate { $0.date >= startDate },
             sortBy: [SortDescriptor(\.date, order: .reverse)]
         )
-        dailyStats = (try? modelContext.fetch(statsDescriptor)) ?? []
+        do {
+            dailyStats = try modelContext.fetch(statsDescriptor)
+        } catch {
+            let appError = AppError.dataError("Failed to load daily stats: \(error.localizedDescription)")
+            LoggingService.logError(appError, context: "StatsViewModel.loadStats")
+            currentError = currentError ?? appError
+            dailyStats = []
+        }
+    }
+
+    var completedPomodoros: [Session] {
+        sessions.filter { $0.type == SessionType.pomodoro.rawValue }
     }
 
     var totalFocusHours: Double {
-        let minutes = sessions.filter { $0.type == SessionType.pomodoro.rawValue }
-            .reduce(0) { $0 + $1.duration }
-        return Double(minutes) / 3600.0
+        let seconds = completedPomodoros.reduce(0) { $0 + $1.duration }
+        return Double(seconds) / 3600.0
     }
 
-    var totalSessions: Int { sessions.count }
+    var totalSessions: Int { completedPomodoros.count }
 
     var averageSessionMinutes: Int {
-        let pomodoros = sessions.filter { $0.type == SessionType.pomodoro.rawValue }
+        let pomodoros = completedPomodoros
         guard !pomodoros.isEmpty else { return 0 }
         return pomodoros.reduce(0) { $0 + $1.duration } / pomodoros.count / 60
     }
@@ -60,7 +79,7 @@ final class StatsViewModel {
 
     var focusByHour: [(hour: Int, count: Int)] {
         var hourCounts = [Int: Int]()
-        for session in sessions where session.type == SessionType.pomodoro.rawValue {
+        for session in completedPomodoros {
             let hour = Calendar.current.component(.hour, from: session.startTime)
             hourCounts[hour, default: 0] += 1
         }
@@ -69,9 +88,9 @@ final class StatsViewModel {
 
     var taskBreakdown: [(title: String, minutes: Int)] {
         var breakdown = [String: Int]()
-        for session in sessions {
+        for session in completedPomodoros {
             let title = session.reminderTitle ?? "Unlinked"
-            breakdown[title, default: 0] += session.duration / 60
+            breakdown[title, default: 0] += max(1, session.duration / 60)
         }
         return breakdown.map { (title: $0.key, minutes: $0.value) }
             .sorted { $0.minutes > $1.minutes }

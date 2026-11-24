@@ -22,7 +22,7 @@ enum LoggingService {
     }()
 
     static func logger(for category: LogCategory) -> Logger {
-        loggers[category]!
+        loggers[category] ?? Logger(subsystem: subsystem, category: category.rawValue)
     }
 
     static func logError(_ error: AppError, context: String? = nil) {

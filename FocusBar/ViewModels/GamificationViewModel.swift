@@ -86,10 +86,22 @@ final class GamificationViewModel {
         let sessionDescriptor = FetchDescriptor<Session>(
             predicate: #Predicate { $0.completed == true && $0.type == pomodoroType }
         )
-        let completedPomodoros = (try? modelContext.fetch(sessionDescriptor)) ?? []
+        let completedPomodoros: [Session]
+        do {
+            completedPomodoros = try modelContext.fetch(sessionDescriptor)
+        } catch {
+            LoggingService.logError(.dataError("Failed to fetch sessions for achievements: \(error.localizedDescription)"), context: "evaluateAndUnlockAchievements")
+            return
+        }
 
         let achievementDescriptor = FetchDescriptor<Achievement>()
-        let existingAchievements = (try? modelContext.fetch(achievementDescriptor)) ?? []
+        let existingAchievements: [Achievement]
+        do {
+            existingAchievements = try modelContext.fetch(achievementDescriptor)
+        } catch {
+            LoggingService.logError(.dataError("Failed to fetch achievements: \(error.localizedDescription)"), context: "evaluateAndUnlockAchievements")
+            return
+        }
         let alreadyUnlocked = Set(existingAchievements.map(\.type))
 
         let calendar = Calendar.current
@@ -127,30 +139,34 @@ final class GamificationViewModel {
         modelContext: ModelContext
     ) {
         let today = Calendar.current.startOfDay(for: Date())
-        let tomorrow = Calendar.current.date(byAdding: .day, value: 1, to: today)!
+        let tomorrow = Calendar.current.date(byAdding: .day, value: 1, to: today) ?? today.addingTimeInterval(86_400)
         let focusMinutes = max(1, durationSeconds / 60)
 
         let descriptor = FetchDescriptor<DailyStats>(
             predicate: #Predicate { $0.date >= today && $0.date < tomorrow }
         )
 
-        if let existing = try? modelContext.fetch(descriptor).first {
-            if sessionType == .pomodoro {
-                existing.pomodorosCompleted += 1
-                existing.totalFocusMinutes += focusMinutes
+        do {
+            if let existing = try modelContext.fetch(descriptor).first {
+                if sessionType == .pomodoro {
+                    existing.pomodorosCompleted += 1
+                    existing.totalFocusMinutes += focusMinutes
+                }
+                existing.xpEarned += xpEarned
+                existing.streakMaintained = streakService.currentStreak > 0
+            } else {
+                let stats = DailyStats(date: today)
+                if sessionType == .pomodoro {
+                    stats.pomodorosCompleted = 1
+                    stats.totalFocusMinutes = focusMinutes
+                }
+                stats.xpEarned = xpEarned
+                stats.streakMaintained = streakService.currentStreak > 0
+                modelContext.insert(stats)
             }
-            existing.xpEarned += xpEarned
-            existing.streakMaintained = streakService.currentStreak > 0
-        } else {
-            let stats = DailyStats(date: today)
-            if sessionType == .pomodoro {
-                stats.pomodorosCompleted = 1
-                stats.totalFocusMinutes = focusMinutes
-            }
-            stats.xpEarned = xpEarned
-            stats.streakMaintained = streakService.currentStreak > 0
-            modelContext.insert(stats)
+            try modelContext.save()
+        } catch {
+            LoggingService.logError(.dataError("Failed to update daily stats: \(error.localizedDescription)"), context: "updateDailyStats")
         }
-        try? modelContext.save()
     }
 }
