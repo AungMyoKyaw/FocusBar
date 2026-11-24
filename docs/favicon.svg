@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="linear-gradient-1" x1="512" y1="100" x2="512" y2="924" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ff5640"/>
+      <stop offset="1" stop-color="#d6241e"/>
+    </linearGradient>
+  </defs>
+  <title>FocusBar AppIcon</title>
+  <g id="Layer_1" data-name="Layer 1">
+    <path d="M285 100 L739 100 C841.173 100 924 182.827 924 285 L924 739 C924 841.173 841.173 924 739 924 L285 924 C182.827 924 100 841.173 100 739 L100 285 C100 182.827 182.827 100 285 100 Z" fill="url(#linear-gradient-1)"/>
+    <circle cx="512" cy="540" r="235" fill="none" stroke="#ffa094" stroke-width="36" stroke-linecap="round" stroke-miterlimit="10"/>
+    <path d="M512 305 C641.787 305 747 410.213 747 540 C747 669.787 641.787 775 512 775 C382.213 775 277 669.787 277 540" fill="none" stroke="#ffffff" stroke-width="36" stroke-linecap="round" stroke-miterlimit="10"/>
+    <path d="M512 248 C538 198 588 196 602 220 C574 244 538 250 512 248 Z" fill="#34d058"/>
+    <path d="M512 248 C486 204 442 204 428 226 C454 246 486 250 512 248 Z" fill="#34d058"/>
+    <line x1="512" y1="252" x2="512" y2="208" fill="none" stroke="#34d058" stroke-width="18" stroke-linecap="round" stroke-miterlimit="10"/>
+    <circle cx="512" cy="540" r="22" fill="#ffffff"/>
+    <line x1="512" y1="540" x2="512" y2="405" fill="none" stroke="#ffffff" stroke-width="26" stroke-linecap="round" stroke-miterlimit="10"/>
+    <circle cx="693" cy="540" r="7" fill="#ffffff"/>
+    <circle cx="512" cy="721" r="7" fill="#ffffff"/>
+    <circle cx="331" cy="540" r="7" fill="#ffffff"/>
+  </g>
+</svg>

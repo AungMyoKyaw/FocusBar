@@ -12,6 +12,12 @@
 </p>
 
 <p align="center">
+  <a href="https://aungmyokyaw.github.io/FocusBar/"><strong>Website</strong></a> ·
+  <a href="https://github.com/AungMyoKyaw/FocusBar/releases/latest"><strong>Download</strong></a> ·
+  <a href="#installation"><strong>Homebrew</strong></a>
+</p>
+
+<p align="center">
   <a href="https://github.com/AungMyoKyaw/FocusBar/actions/workflows/build.yml"><img src="https://github.com/AungMyoKyaw/FocusBar/actions/workflows/build.yml/badge.svg" alt="Build Status" /></a>
   <a href="https://github.com/AungMyoKyaw/FocusBar/actions/workflows/release.yml"><img src="https://github.com/AungMyoKyaw/FocusBar/actions/workflows/release.yml/badge.svg" alt="Release Status" /></a>
   <img src="https://img.shields.io/badge/platform-macOS%2014.0%2B-blue" alt="macOS 14.0+" />
