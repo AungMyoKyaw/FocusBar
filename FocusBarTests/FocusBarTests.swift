@@ -279,9 +279,9 @@ struct StatsViewModelTests {
 @MainActor
 struct TimerViewModelTests {
 
-    @Test func menuBarTitleAndSystemImageReflectStateWithoutEmoji() {
+    @Test func menuBarTitleAndSystemImageReflectStateWithoutEmoji() throws {
         let suiteName = "FocusBarTests.TimerVM.\(UUID().uuidString)"
-        let defaults = UserDefaults(suiteName: suiteName)!
+        let defaults = try #require(UserDefaults(suiteName: suiteName))
         defer { defaults.removePersistentDomain(forName: suiteName) }
 
         let service = TimerService(defaults: defaults, debounceInterval: 0)
