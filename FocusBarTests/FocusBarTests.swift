@@ -304,4 +304,65 @@ struct TimerViewModelTests {
         #expect(vm.menuBarTitle.isEmpty)
         #expect(vm.currentSessionType == .shortBreak)
     }
+
+    @Test func selectSessionTypeUpdatesWhenIdleAndIgnoresWhenRunning() throws {
+        let suiteName = "FocusBarTests.SelectType.\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        let service = TimerService(defaults: defaults, debounceInterval: 0)
+        let vm = TimerViewModel(timerService: service)
+
+        #expect(vm.currentSessionType == .pomodoro)
+        vm.selectSessionType(.longBreak)
+        #expect(vm.currentSessionType == .longBreak)
+
+        vm.startFocus()
+        vm.selectSessionType(.shortBreak)
+        #expect(vm.currentSessionType == .longBreak)
+    }
+
+    @Test func adjustConfiguredDurationClampsBoundsAndIgnoresWhenRunning() throws {
+        let suiteName = "FocusBarTests.AdjustDuration.\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        let originalFocus = UserDefaults.standard.object(forKey: UserDefaultsKeys.pomodoroDuration)
+        let originalShort = UserDefaults.standard.object(forKey: UserDefaultsKeys.shortBreakDuration)
+        defer {
+            if let originalFocus {
+                UserDefaults.standard.set(originalFocus, forKey: UserDefaultsKeys.pomodoroDuration)
+            } else {
+                UserDefaults.standard.removeObject(forKey: UserDefaultsKeys.pomodoroDuration)
+            }
+            if let originalShort {
+                UserDefaults.standard.set(originalShort, forKey: UserDefaultsKeys.shortBreakDuration)
+            } else {
+                UserDefaults.standard.removeObject(forKey: UserDefaultsKeys.shortBreakDuration)
+            }
+        }
+
+        UserDefaults.standard.set(25, forKey: UserDefaultsKeys.pomodoroDuration)
+        UserDefaults.standard.set(5, forKey: UserDefaultsKeys.shortBreakDuration)
+
+        let service = TimerService(defaults: defaults, debounceInterval: 0)
+        let vm = TimerViewModel(timerService: service)
+
+        vm.adjustConfiguredDuration(by: 5)
+        #expect(UserDefaults.standard.integer(forKey: UserDefaultsKeys.pomodoroDuration) == 30)
+
+        vm.adjustConfiguredDuration(by: -100)
+        #expect(UserDefaults.standard.integer(forKey: UserDefaultsKeys.pomodoroDuration) == 1)
+
+        vm.adjustConfiguredDuration(by: 200)
+        #expect(UserDefaults.standard.integer(forKey: UserDefaultsKeys.pomodoroDuration) == 120)
+
+        vm.selectSessionType(.shortBreak)
+        vm.adjustConfiguredDuration(by: 100)
+        #expect(UserDefaults.standard.integer(forKey: UserDefaultsKeys.shortBreakDuration) == 60)
+
+        vm.startFocus()
+        vm.adjustConfiguredDuration(by: -5)
+        #expect(UserDefaults.standard.integer(forKey: UserDefaultsKeys.shortBreakDuration) == 60)
+    }
 }

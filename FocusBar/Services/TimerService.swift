@@ -107,6 +107,11 @@ final class TimerService {
         advanceToNextSession()
     }
 
+    func selectSessionType(_ type: SessionType) {
+        guard state == .idle else { return }
+        currentSessionType = type
+    }
+
     private func durationForCurrentType() -> Int {
         switch currentSessionType {
         case .pomodoro:

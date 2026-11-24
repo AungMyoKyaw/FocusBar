@@ -92,15 +92,19 @@ struct FocusBarApp: App {
             SettingsView()
                 .modelContainer(sharedModelContainer)
         }
+        .defaultSize(width: 520, height: 420)
+        .windowResizability(.contentSize)
 
         Window("Statistics", id: "stats") {
             StatsView()
                 .modelContainer(sharedModelContainer)
         }
+        .defaultSize(width: 720, height: 580)
 
         Window("Achievements", id: "achievements") {
             AchievementsView()
                 .modelContainer(sharedModelContainer)
         }
+        .defaultSize(width: 660, height: 580)
     }
 }

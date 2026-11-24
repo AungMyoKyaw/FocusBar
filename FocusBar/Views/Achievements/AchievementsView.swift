@@ -29,6 +29,12 @@ struct AchievementsView: View {
         return Double(unlockedAchievements.count) / Double(Constants.achievements.count)
     }
 
+    private var totalBonusXPEarned: Int {
+        Constants.achievements
+            .filter { unlockedIds.contains($0.id) }
+            .reduce(0) { $0 + $1.xpBonus }
+    }
+
     private var visibleCategories: [String] {
         Self.categoryOrder.filter { !filteredDefinitions(for: $0).isEmpty }
     }
@@ -47,38 +53,16 @@ struct AchievementsView: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 18) {
-                HStack(alignment: .firstTextBaseline) {
+            VStack(alignment: .leading, spacing: 20) {
+                VStack(alignment: .leading, spacing: 2) {
                     Text("Achievements")
                         .font(.title.bold())
-                    Spacer()
-                    Picker("Filter", selection: $filter) {
-                        ForEach(Filter.allCases, id: \.self) { option in
-                            Text(option.rawValue).tag(option)
-                        }
-                    }
-                    .pickerStyle(.segmented)
-                    .frame(width: 220)
-                    .accessibilityLabel("Achievement filter")
+                    Text("Milestones across focus, streaks, and tasks")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
                 }
 
-                VStack(alignment: .leading, spacing: 6) {
-                    HStack {
-                        Text("\(unlockedAchievements.count) of \(Constants.achievements.count) unlocked")
-                            .font(.subheadline)
-                            .monospacedDigit()
-                            .foregroundStyle(.secondary)
-                        Spacer()
-                        Text("\(Int(unlockProgress * 100))%")
-                            .font(.subheadline.weight(.medium))
-                            .monospacedDigit()
-                            .foregroundStyle(FocusBarTheme.focusAccent)
-                    }
-                    ProgressView(value: unlockProgress)
-                        .tint(FocusBarTheme.focusAccent)
-                }
-                .accessibilityElement(children: .combine)
-                .accessibilityLabel("\(unlockedAchievements.count) of \(Constants.achievements.count) achievements unlocked")
+                progressSummaryCard
 
                 if visibleCategories.isEmpty {
                     ContentUnavailableView(
@@ -87,61 +71,146 @@ struct AchievementsView: View {
                         description: Text(filter == .unlocked ? "Complete focus sessions to unlock your first badge." : "Every achievement has been earned.")
                     )
                     .frame(maxWidth: .infinity, minHeight: 240)
+                    .focusCardSurface()
                 } else {
                     ForEach(visibleCategories, id: \.self) { category in
                         achievementSection(for: category)
                     }
                 }
             }
-            .padding(20)
+            .frame(maxWidth: 820, alignment: .leading)
+            .padding(24)
+            .frame(maxWidth: .infinity)
         }
-        .frame(width: 520, height: 520)
+        .frame(minWidth: 580, minHeight: 480)
+        .toolbar {
+            ToolbarItem(placement: .principal) {
+                Picker("Filter", selection: $filter) {
+                    ForEach(Filter.allCases, id: \.self) { option in
+                        Text(option.rawValue).tag(option)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+                .accessibilityLabel("Achievement filter")
+            }
+        }
+    }
+
+    private var progressSummaryCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .firstTextBaseline) {
+                Text("\(unlockedAchievements.count) of \(Constants.achievements.count) unlocked")
+                    .font(.headline)
+                    .monospacedDigit()
+
+                Spacer()
+
+                Text("+\(totalBonusXPEarned) XP earned")
+                    .font(.caption.weight(.semibold))
+                    .monospacedDigit()
+                    .foregroundStyle(FocusBarTheme.shortBreakAccent)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3)
+                    .background(FocusBarTheme.shortBreakAccent.opacity(0.14), in: Capsule())
+
+                Text("\(Int(unlockProgress * 100))%")
+                    .font(.subheadline.weight(.semibold))
+                    .monospacedDigit()
+                    .foregroundStyle(FocusBarTheme.focusAccent)
+            }
+
+            GeometryReader { geo in
+                let clamped = min(max(unlockProgress, 0), 1)
+                ZStack(alignment: .leading) {
+                    Capsule()
+                        .fill(Color.primary.opacity(0.08))
+                    if clamped > 0 {
+                        Capsule()
+                            .fill(FocusBarTheme.focusAccent)
+                            .frame(width: max(6, geo.size.width * clamped))
+                    }
+                }
+            }
+            .frame(height: 6)
+        }
+        .padding(16)
+        .focusCardSurface()
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(unlockedAchievements.count) of \(Constants.achievements.count) achievements unlocked, \(totalBonusXPEarned) bonus XP earned")
     }
 
     private func achievementSection(for category: String) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 10) {
             Text(category)
                 .font(.headline)
 
-            ForEach(filteredDefinitions(for: category), id: \.id) { def in
-                let unlocked = unlockedIds.contains(def.id)
-                HStack(spacing: 12) {
-                    Image(systemName: unlocked ? "checkmark.seal.fill" : "seal")
-                        .foregroundStyle(unlocked ? FocusBarTheme.shortBreakAccent : .secondary)
-                        .font(.title3)
+            LazyVGrid(
+                columns: [GridItem(.adaptive(minimum: 260), spacing: 12)],
+                spacing: 12
+            ) {
+                ForEach(filteredDefinitions(for: category), id: \.id) { def in
+                    let unlocked = unlockedIds.contains(def.id)
+                    let achievement = unlocked ? unlockedAchievements.first(where: { $0.type == def.id }) : nil
+                    achievementCard(def: def, unlocked: unlocked, unlockedAt: achievement?.unlockedAt)
+                }
+            }
+        }
+    }
 
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(def.title)
-                            .font(.body.weight(.semibold))
-                            .foregroundStyle(unlocked ? .primary : .secondary)
-                        Text(def.description)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
+    private func achievementCard(
+        def: Constants.AchievementDefinition,
+        unlocked: Bool,
+        unlockedAt: Date?
+    ) -> some View {
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: unlocked ? "checkmark.seal.fill" : "seal")
+                .font(.title3)
+                .foregroundStyle(unlocked ? FocusBarTheme.shortBreakAccent : .secondary)
+                .frame(width: 32, height: 32)
+                .background(
+                    (unlocked ? FocusBarTheme.shortBreakAccent : Color.primary).opacity(unlocked ? 0.14 : 0.06),
+                    in: RoundedRectangle(cornerRadius: 8, style: .continuous)
+                )
 
-                    Spacer()
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(alignment: .firstTextBaseline, spacing: 6) {
+                    Text(def.title)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(unlocked ? .primary : .secondary)
+                        .lineLimit(1)
 
-                    if unlocked, let achievement = unlockedAchievements.first(where: { $0.type == def.id }) {
-                        Text(achievement.unlockedAt, style: .date)
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
-                    }
+                    Spacer(minLength: 4)
 
                     Text("+\(def.xpBonus) XP")
-                        .font(.caption.bold())
+                        .font(.caption2.bold())
                         .monospacedDigit()
                         .foregroundStyle(unlocked ? FocusBarTheme.shortBreakAccent : .secondary)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 3)
+                        .padding(.horizontal, 7)
+                        .padding(.vertical, 2)
                         .background(
                             (unlocked ? FocusBarTheme.shortBreakAccent : Color.secondary).opacity(0.12),
                             in: Capsule()
                         )
                 }
-                .padding(.vertical, 4)
-                .accessibilityElement(children: .combine)
-                .accessibilityLabel("\(def.title), \(def.description), \(unlocked ? "Unlocked" : "Locked"), \(def.xpBonus) XP bonus")
+
+                Text(def.description)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(2)
+
+                if let unlockedAt {
+                    Text(unlockedAt, style: .date)
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                }
             }
         }
+        .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .focusCardSurface()
+        .opacity(unlocked ? 1.0 : 0.72)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(def.title), \(def.description), \(unlocked ? "Unlocked" : "Locked"), \(def.xpBonus) XP bonus")
     }
 }

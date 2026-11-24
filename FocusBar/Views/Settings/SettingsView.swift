@@ -24,11 +24,36 @@ struct SettingsView: View {
             aboutTab
                 .tabItem { Label("About", systemImage: "info.circle") }
         }
-        .frame(width: 480, height: 380)
+        .frame(minWidth: 480, minHeight: 380)
     }
 
     private var timerTab: some View {
         Form {
+            Section("Presets") {
+                HStack(spacing: 8) {
+                    Button("Classic 25/5") {
+                        viewModel.pomodoroDuration = 25
+                        viewModel.shortBreakDuration = 5
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+
+                    Button("Deep 50/10") {
+                        viewModel.pomodoroDuration = 50
+                        viewModel.shortBreakDuration = 10
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+
+                    Button("Sprint 15/3") {
+                        viewModel.pomodoroDuration = 15
+                        viewModel.shortBreakDuration = 3
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                }
+                .accessibilityElement(children: .contain)
+            }
             Section("Session Durations") {
                 Stepper("Focus: \(viewModel.pomodoroDuration) min", value: $viewModel.pomodoroDuration, in: 1...120)
                     .monospacedDigit()

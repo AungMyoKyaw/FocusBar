@@ -110,6 +110,31 @@ final class TimerViewModel {
         timerService.skip()
     }
 
+    func selectSessionType(_ type: SessionType) {
+        timerService.selectSessionType(type)
+    }
+
+    func adjustConfiguredDuration(by deltaMinutes: Int) {
+        guard timerState == .idle else { return }
+        let durationKey: String
+        let maxMinutes: Int
+        switch currentSessionType {
+        case .pomodoro:
+            durationKey = UserDefaultsKeys.pomodoroDuration
+            maxMinutes = 120
+        case .shortBreak:
+            durationKey = UserDefaultsKeys.shortBreakDuration
+            maxMinutes = 60
+        case .longBreak:
+            durationKey = UserDefaultsKeys.longBreakDuration
+            maxMinutes = 120
+        }
+        let stored = UserDefaults.standard.integer(forKey: durationKey)
+        let current = stored > 0 ? stored : currentSessionType.defaultDurationMinutes
+        let clamped = min(max(current + deltaMinutes, 1), maxMinutes)
+        UserDefaults.standard.set(clamped, forKey: durationKey)
+    }
+
     func onLaunch() {
         gamificationViewModel.checkStreakOnLaunch()
         loadDailyPomodoroCount()

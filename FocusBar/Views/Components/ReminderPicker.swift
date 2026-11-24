@@ -2,81 +2,162 @@ import SwiftUI
 
 struct ReminderPicker: View {
     @Bindable var viewModel: RemindersViewModel
+    @State private var isExpanded = false
 
     var body: some View {
-        VStack(spacing: 6) {
+        VStack(spacing: 8) {
             if viewModel.isAuthorized {
-                HStack {
-                    Image(systemName: "checklist")
-                        .foregroundStyle(.secondary)
-                    TextField("Search reminders...", text: $viewModel.searchQuery)
-                        .textFieldStyle(.roundedBorder)
-                        .controlSize(.small)
-                        .accessibilityLabel("Search reminders")
-                        .accessibilityHint("Type to filter your reminders")
-                        .onChange(of: viewModel.searchQuery) {
-                            Task { await viewModel.loadReminders() }
-                        }
-                }
-
                 if let selected = viewModel.selectedReminder {
-                    HStack {
-                        Image(systemName: "checkmark.circle.fill")
-                            .foregroundStyle(.green)
-                        Text(selected.title)
-                            .font(.caption)
-                            .lineLimit(1)
-                        Spacer()
-                        Button("Clear") {
-                            viewModel.selectedReminder = nil
-                        }
-                        .font(.caption)
-                        .buttonStyle(.plain)
-                        .accessibilityLabel("Clear selected reminder")
-                        .accessibilityHint("Removes the linked reminder from this session")
+                    selectedRow(selected)
+                } else {
+                    unselectedHeader
+                    if isExpanded {
+                        expandedPickerContent
                     }
-                }
-
-                if !viewModel.reminders.isEmpty && viewModel.selectedReminder == nil {
-                    ScrollView {
-                        VStack(alignment: .leading, spacing: 2) {
-                            ForEach(viewModel.reminders.prefix(5)) { reminder in
-                                Button {
-                                    viewModel.selectedReminder = reminder
-                                    viewModel.searchQuery = ""
-                                    viewModel.reminders = []
-                                } label: {
-                                    Text(reminder.title)
-                                        .font(.caption)
-                                        .frame(maxWidth: .infinity, alignment: .leading)
-                                        .accessibilityLabel(reminder.title)
-                                }
-                                .buttonStyle(.plain)
-                            }
-                        }
-                    }
-                    .frame(maxHeight: 80)
-                }
-
-                HStack {
-                    TextField("Quick add task...", text: $viewModel.quickAddText)
-                        .textFieldStyle(.roundedBorder)
-                        .controlSize(.small)
-                        .accessibilityLabel("Quick add task")
-                        .accessibilityHint("Type a task name and press Return to create a new reminder")
-                        .onSubmit {
-                            Task { await viewModel.createQuickTask() }
-                        }
                 }
             } else {
-                Button("Connect Apple Reminders") {
-                    Task { await viewModel.requestAccess() }
-                }
-                .font(.caption)
-                .buttonStyle(.plain)
-                .foregroundStyle(.blue)
-                .accessibilityHint("Requests permission to access your Apple Reminders")
+                connectRow
             }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .focusCardSurface(cornerRadius: FocusBarTheme.controlCornerRadius)
+    }
+
+    private var connectRow: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "checklist")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+
+            Text("Apple Reminders")
+                .font(.caption.weight(.medium))
+                .foregroundStyle(.primary)
+
+            Spacer()
+
+            Button {
+                Task { await viewModel.requestAccess() }
+            } label: {
+                Text("Connect")
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(.primary)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 4)
+                    .background(Color.primary.opacity(0.08), in: Capsule())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Connect Apple Reminders")
+            .accessibilityHint("Requests permission to access your Apple Reminders")
+        }
+    }
+
+    private func selectedRow(_ selected: ReminderItem) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: "checkmark.circle.fill")
+                .font(.caption)
+                .foregroundStyle(FocusBarTheme.shortBreakAccent)
+
+            Text(selected.title)
+                .font(.caption.weight(.medium))
+                .lineLimit(1)
+                .foregroundStyle(.primary)
+
+            Spacer()
+
+            Button {
+                viewModel.selectedReminder = nil
+            } label: {
+                Image(systemName: "xmark.circle.fill")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Clear selected reminder")
+            .accessibilityHint("Removes the linked reminder from this session")
+        }
+    }
+
+    private var unselectedHeader: some View {
+        Button {
+            withAnimation(.easeInOut(duration: 0.18)) {
+                isExpanded.toggle()
+            }
+            if isExpanded && viewModel.reminders.isEmpty {
+                Task { await viewModel.loadReminders() }
+            }
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: "checklist")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+
+                Text("Link a task...")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+
+                Spacer()
+
+                Image(systemName: "chevron.down")
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(.tertiary)
+                    .rotationEffect(.degrees(isExpanded ? 180 : 0))
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Link a task")
+        .accessibilityHint("Expands reminder search and quick add")
+    }
+
+    private var expandedPickerContent: some View {
+        VStack(spacing: 6) {
+            TextField("Search reminders...", text: $viewModel.searchQuery)
+                .textFieldStyle(.roundedBorder)
+                .controlSize(.small)
+                .accessibilityLabel("Search reminders")
+                .accessibilityHint("Type to filter your reminders")
+                .onChange(of: viewModel.searchQuery) {
+                    Task { await viewModel.loadReminders() }
+                }
+
+            if !viewModel.reminders.isEmpty {
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 2) {
+                        ForEach(viewModel.reminders.prefix(5)) { reminder in
+                            Button {
+                                viewModel.selectedReminder = reminder
+                                viewModel.searchQuery = ""
+                                viewModel.reminders = []
+                                isExpanded = false
+                            } label: {
+                                Text(reminder.title)
+                                    .font(.caption)
+                                    .lineLimit(1)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .padding(.horizontal, 6)
+                                    .padding(.vertical, 4)
+                                    .background(Color.primary.opacity(0.05), in: RoundedRectangle(cornerRadius: 6))
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityLabel(reminder.title)
+                        }
+                    }
+                }
+                .frame(maxHeight: 84)
+            }
+
+            TextField("Quick add task...", text: $viewModel.quickAddText)
+                .textFieldStyle(.roundedBorder)
+                .controlSize(.small)
+                .accessibilityLabel("Quick add task")
+                .accessibilityHint("Type a task name and press Return to create a new reminder")
+                .onSubmit {
+                    Task {
+                        await viewModel.createQuickTask()
+                        isExpanded = false
+                    }
+                }
         }
     }
 }

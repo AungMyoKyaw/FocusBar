@@ -6,9 +6,10 @@ enum FocusBarTheme {
     static let longBreakAccent = Color.blue
     static let streakAccent = Color.orange
 
-    static let cardCornerRadius: CGFloat = 10
-    static let ringSize: CGFloat = 144
-    static let ringLineWidth: CGFloat = 8
+    static let cardCornerRadius: CGFloat = 12
+    static let controlCornerRadius: CGFloat = 10
+    static let ringSize: CGFloat = 164
+    static let ringLineWidth: CGFloat = 7
 
     static func accent(for sessionType: SessionType) -> Color {
         switch sessionType {
@@ -19,7 +20,37 @@ enum FocusBarTheme {
     }
 }
 
-struct MenuBarActionRow: View {
+extension View {
+    @ViewBuilder
+    func focusGlassCapsule(tint: Color? = nil, interactive: Bool = true) -> some View {
+        if #available(macOS 26, *) {
+            if let tint {
+                self.glassEffect(.regular.tint(tint).interactive(interactive), in: Capsule())
+            } else {
+                self.glassEffect(.regular.interactive(interactive), in: Capsule())
+            }
+        } else {
+            self.background(
+                (tint ?? Color.primary).opacity(tint == nil ? 0.08 : 0.16),
+                in: Capsule()
+            )
+        }
+    }
+
+    func focusCardSurface(cornerRadius: CGFloat = FocusBarTheme.cardCornerRadius) -> some View {
+        self
+            .background(
+                .quaternary.opacity(0.45),
+                in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                    .strokeBorder(Color.primary.opacity(0.08), lineWidth: 1)
+            )
+    }
+}
+
+struct MenuBarDockButton: View {
     let title: String
     let systemImage: String
     let hint: String
@@ -30,22 +61,24 @@ struct MenuBarActionRow: View {
 
     var body: some View {
         Button(action: action) {
-            HStack(spacing: 8) {
+            VStack(spacing: 3) {
                 Image(systemName: systemImage)
-                    .frame(width: 16)
-                    .foregroundStyle(isDestructive ? .red : .secondary)
+                    .font(.system(size: 13, weight: .medium))
                 Text(title)
-                    .foregroundStyle(isDestructive ? .red : .primary)
-                Spacer()
+                    .font(.system(size: 10, weight: .medium))
             }
-            .font(.callout)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 5)
+            .foregroundStyle(isDestructive && isHovered ? .red : (isHovered ? .primary : .secondary))
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 6)
             .background(
-                RoundedRectangle(cornerRadius: 6)
-                    .fill(isHovered ? Color.primary.opacity(0.08) : Color.clear)
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .fill(
+                        isDestructive && isHovered
+                            ? Color.red.opacity(0.12)
+                            : (isHovered ? Color.primary.opacity(0.08) : Color.clear)
+                    )
             )
-            .contentShape(RoundedRectangle(cornerRadius: 6))
+            .contentShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
         }
         .buttonStyle(.plain)
         .onHover { isHovered = $0 }
