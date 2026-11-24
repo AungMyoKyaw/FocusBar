@@ -6,14 +6,12 @@ enum UserDefaultsKeys {
     static let shortBreakDuration = "focusBar.timer.shortBreakDuration"
     static let longBreakDuration = "focusBar.timer.longBreakDuration"
     static let sessionsUntilLongBreak = "focusBar.timer.sessionsUntilLongBreak"
+    static let autoStartNextSession = "focusBar.timer.autoStartNextSession"
 
     static let menuBarDisplayMode = "focusBar.display.menuBarMode"
-    static let showIcon = "focusBar.display.showIcon"
 
     static let soundEnabled = "focusBar.notifications.soundEnabled"
     static let bannerEnabled = "focusBar.notifications.bannerEnabled"
-    static let overlayEnabled = "focusBar.notifications.overlayEnabled"
-    static let soundFile = "focusBar.notifications.soundFile"
 
     static let currentXP = "focusBar.gamification.currentXP"
     static let currentLevel = "focusBar.gamification.currentLevel"
@@ -21,6 +19,7 @@ enum UserDefaultsKeys {
     static let lastStreakDate = "focusBar.gamification.lastStreakDate"
     static let streakFreezesRemaining = "focusBar.gamification.streakFreezes"
     static let lastFreezeResetWeek = "focusBar.gamification.lastFreezeResetWeek"
+    static let hasUsedStreakFreeze = "focusBar.gamification.hasUsedStreakFreeze"
     static let dailyGoal = "focusBar.gamification.dailyGoal"
 
     static let hasCompletedOnboarding = "focusBar.onboarding.hasCompletedOnboarding"

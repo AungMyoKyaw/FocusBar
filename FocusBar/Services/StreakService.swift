@@ -1,7 +1,15 @@
 import Foundation
 
 final class StreakService {
-    private let defaults = UserDefaults.standard
+    private let defaults: UserDefaults
+
+    init(defaults: UserDefaults = .standard) {
+        self.defaults = defaults
+    }
+
+    var hasUsedStreakFreeze: Bool {
+        defaults.bool(forKey: UserDefaultsKeys.hasUsedStreakFreeze)
+    }
 
     var currentStreak: Int {
         get { defaults.integer(forKey: UserDefaultsKeys.currentStreak) }
@@ -67,6 +75,7 @@ final class StreakService {
     func useStreakFreeze() -> Bool {
         if streakFreezesRemaining > 0 {
             streakFreezesRemaining -= 1
+            defaults.set(true, forKey: UserDefaultsKeys.hasUsedStreakFreeze)
             LoggingService.logInfo("Streak freeze used, \(streakFreezesRemaining) remaining", category: .gamification)
             return true
         }

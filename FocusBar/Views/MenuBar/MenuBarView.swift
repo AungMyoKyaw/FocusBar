@@ -7,14 +7,16 @@ struct MenuBarView: View {
 
     var body: some View {
         VStack(spacing: 12) {
-            if let error = timerViewModel.currentError {
+            if let error = timerViewModel.displayError {
                 ErrorBannerView(error: error) {
-                    timerViewModel.currentError = nil
+                    timerViewModel.clearError()
                 }
             }
             headerSection
             timerSection
             controlsSection
+            Divider()
+            ReminderPicker(viewModel: timerViewModel.remindersViewModel)
             Divider()
             XPProgressView(
                 currentXP: timerViewModel.gamificationViewModel.currentXP,

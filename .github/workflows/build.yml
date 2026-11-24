@@ -16,7 +16,7 @@ concurrency:
 jobs:
   build:
     runs-on: macos-latest
-    
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -27,14 +27,15 @@ jobs:
       - name: Show Xcode version
         run: xcodebuild -version
 
-      - name: Build FocusBar
+      - name: Build and Run Unit Tests
         run: |
-          xcodebuild -project FocusBar.xcodeproj \
+          xcodebuild test \
+            -project FocusBar.xcodeproj \
             -scheme FocusBar \
-            -configuration Debug \
-            -derivedDataPath DerivedData \
-            build
+            -destination 'platform=macOS' \
+            -only-testing:FocusBarTests \
+            -derivedDataPath DerivedData
 
       - name: Cleanup
-        run: |
-          rm -rf DerivedData
+        if: always()
+        run: rm -rf DerivedData

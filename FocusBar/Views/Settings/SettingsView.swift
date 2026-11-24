@@ -4,6 +4,8 @@ import SwiftData
 struct SettingsView: View {
     @Environment(\.modelContext) private var modelContext
     @State private var viewModel = SettingsViewModel()
+    @State private var exportError: AppError?
+    @State private var exportStatusMessage: String?
     private let exportService = ExportService()
 
     var body: some View {
@@ -42,6 +44,8 @@ struct SettingsView: View {
                 Stepper("Sessions until long break: \(viewModel.sessionsUntilLongBreak)", value: $viewModel.sessionsUntilLongBreak, in: 1...12)
                     .accessibilityValue("\(viewModel.sessionsUntilLongBreak) sessions")
                     .accessibilityHint("Adjusts how many focus sessions before a long break")
+                Toggle("Auto-start next session", isOn: $viewModel.autoStartNextSession)
+                    .accessibilityHint("Automatically starts the next focus or break session when one completes")
             }
         }
     }
@@ -51,7 +55,6 @@ struct SettingsView: View {
             Section("Alerts") {
                 Toggle("Notification Banner", isOn: $viewModel.bannerEnabled)
                 Toggle("Sound", isOn: $viewModel.soundEnabled)
-                Toggle("Screen Overlay on Break", isOn: $viewModel.overlayEnabled)
             }
         }
     }
@@ -63,6 +66,18 @@ struct SettingsView: View {
                     ForEach(MenuBarDisplayMode.allCases, id: \.rawValue) { mode in
                         Text(mode.displayName).tag(mode.rawValue)
                     }
+                }
+            }
+            Section("Startup") {
+                Toggle("Launch at Login", isOn: Binding(
+                    get: { viewModel.launchAtLogin },
+                    set: { viewModel.setLaunchAtLogin($0) }
+                ))
+                .accessibilityHint("Starts FocusBar automatically when you log in")
+                if let error = viewModel.launchAtLoginError {
+                    Text(error)
+                        .font(.caption)
+                        .foregroundStyle(.red)
                 }
             }
         }
@@ -91,7 +106,7 @@ struct SettingsView: View {
             }
             Section("Feedback") {
                 Link("Send Feedback", destination: URL(string: Constants.feedbackURL)!)
-                    .accessibilityHint("Opens your email client to send feedback")
+                    .accessibilityHint("Opens FocusBar GitHub Issues in your browser")
             }
             Section("Credits") {
                 Text("FocusBar — A Pomodoro timer for your menu bar.")
@@ -108,18 +123,41 @@ struct SettingsView: View {
         Form {
             Section("Export") {
                 Button("Export All Data to JSON...") {
+                    exportError = nil
+                    exportStatusMessage = nil
                     Task {
-                        let sessions = (try? modelContext.fetch(FetchDescriptor<Session>())) ?? []
-                        let achievements = (try? modelContext.fetch(FetchDescriptor<Achievement>())) ?? []
-                        let stats = (try? modelContext.fetch(FetchDescriptor<DailyStats>())) ?? []
-                        _ = try? await exportService.exportAll(
-                            sessions: sessions,
-                            achievements: achievements,
-                            dailyStats: stats
-                        )
+                        do {
+                            let sessions = try modelContext.fetch(FetchDescriptor<Session>())
+                            let achievements = try modelContext.fetch(FetchDescriptor<Achievement>())
+                            let stats = try modelContext.fetch(FetchDescriptor<DailyStats>())
+                            if let url = try await exportService.exportAll(
+                                sessions: sessions,
+                                achievements: achievements,
+                                dailyStats: stats
+                            ) {
+                                exportStatusMessage = "Exported to \(url.lastPathComponent)"
+                            }
+                        } catch let error as AppError {
+                            exportError = error
+                        } catch {
+                            exportError = .exportFailed(error.localizedDescription)
+                        }
                     }
                 }
                 .accessibilityHint("Exports all session data to a JSON file")
+
+                if let exportStatusMessage {
+                    Text(exportStatusMessage)
+                        .font(.caption)
+                        .foregroundStyle(.green)
+                }
+
+                if let exportError {
+                    Text(exportError.localizedDescription)
+                        .font(.caption)
+                        .foregroundStyle(.red)
+                }
+
                 Text("Exports sessions, achievements, stats, and preferences to a JSON file.")
                     .font(.caption)
                     .foregroundStyle(.secondary)

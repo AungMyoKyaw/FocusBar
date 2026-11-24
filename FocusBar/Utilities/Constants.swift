@@ -2,7 +2,7 @@ import Foundation
 
 enum Constants {
 
-    static let feedbackURL = "mailto:support@focusbar.app"
+    static let feedbackURL = "https://github.com/AungMyoKyaw/FocusBar/issues"
 
     static var appVersion: String {
         Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"

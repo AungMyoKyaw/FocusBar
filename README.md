@@ -1,22 +1,35 @@
 # FocusBar
 
-A macOS menu bar Pomodoro timer application with gamification and Apple Reminders integration.
+A native macOS menu bar Pomodoro timer application with gamification and Apple Reminders integration.
 
-[![Build](https://github.com/aungmyokyaw/FocusBar/actions/workflows/build.yml/badge.svg)](https://github.com/aungmyokyaw/FocusBar/actions/workflows/build.yml)
-[![Release](https://github.com/aungmyokyaw/FocusBar/actions/workflows/release.yml/badge.svg)](https://github.com/aungmyokyaw/FocusBar/actions/workflows/release.yml)
+[![Build](https://github.com/AungMyoKyaw/FocusBar/actions/workflows/build.yml/badge.svg)](https://github.com/AungMyoKyaw/FocusBar/actions/workflows/build.yml)
+[![Release](https://github.com/AungMyoKyaw/FocusBar/actions/workflows/release.yml/badge.svg)](https://github.com/AungMyoKyaw/FocusBar/actions/workflows/release.yml)
 
 ## Features
 
-- 🍅 Pomodoro timer in the menu bar
-- 🎮 Gamification system with XP and achievements
-- 📊 Statistics tracking and visualization
-- 🔔 Apple Reminders integration
-- 🔄 Daily streak tracking
+- 🍅 Pomodoro timer in the menu bar (countdown text, progress bar, or icon-only modes)
+- 🎮 Gamification system with XP, 30 levels, and 20 achievements
+- 📊 Statistics tracking and visualization with Swift Charts
+- 🔔 Apple Reminders integration (search, quick-add, and log focus time)
+- 🔄 Daily streak tracking with weekly streak freezes
+- 🚀 Launch at Login & optional auto-start next session
 
 ## Requirements
 
-- macOS 13.0+ (Ventura)
-- Xcode 15.0+
+- macOS 14.0+ (Sonoma)
+- Xcode 15.0+ (for building from source)
+
+## Installation
+
+### Homebrew
+
+```bash
+brew install --cask aungmyokyaw/tap/focusbar
+```
+
+### Direct Download
+
+Download `FocusBar.app.zip` from the [GitHub Releases](https://github.com/AungMyoKyaw/FocusBar/releases) page, unzip it, and drag `FocusBar.app` to `/Applications`.
 
 ## Development
 
@@ -47,16 +60,11 @@ Releases are automated using GitHub Actions. To create a new release:
    ```
 
 2. The workflow will:
-   - Build the app using Xcode
+   - Run `FocusBarTests`
+   - Build a Universal binary (`arm64` + `x86_64`) using Xcode
    - Apply ad-hoc code signing
-   - Create a GitHub Release with the built artifact
-   - Include automatic release notes from commit history
-
-### Tag Format
-
-- Regular releases: `v1.0.0`, `v1.2.3`
-- Pre-releases: `v1.0.0-alpha1`, `v1.0.0-beta1`
+   - Package `FocusBar.app.zip` and publish a GitHub Release with release notes
 
 ## License
 
-MIT
+[MIT](LICENSE)

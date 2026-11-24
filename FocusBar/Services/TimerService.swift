@@ -1,7 +1,7 @@
 import Foundation
 import AppKit
 
-enum TimerState {
+nonisolated enum TimerState: Equatable, Sendable {
     case idle
     case running
     case paused
@@ -22,22 +22,26 @@ final class TimerService {
     private var timer: Timer?
     private var totalDurationSeconds: Int = 0
 
+    private let defaults: UserDefaults
+    private let debounceInterval: TimeInterval
     private var lastStateChangeDate: Date = .distantPast
     private var sleepObserver: NSObjectProtocol?
     private var wakeObserver: NSObjectProtocol?
 
-    init() {
+    init(defaults: UserDefaults = .standard, debounceInterval: TimeInterval = 0.3) {
+        self.defaults = defaults
+        self.debounceInterval = debounceInterval
         setupSleepWakeObservers()
     }
 
     deinit {
         timer?.invalidate()
-        if let sleepObserver { NotificationCenter.default.removeObserver(sleepObserver) }
-        if let wakeObserver { NotificationCenter.default.removeObserver(wakeObserver) }
+        if let sleepObserver { NSWorkspace.shared.notificationCenter.removeObserver(sleepObserver) }
+        if let wakeObserver { NSWorkspace.shared.notificationCenter.removeObserver(wakeObserver) }
     }
 
     func start(duration: Int? = nil) {
-        guard Date().timeIntervalSince(lastStateChangeDate) >= 0.3 else {
+        guard Date().timeIntervalSince(lastStateChangeDate) >= debounceInterval else {
             LoggingService.logDebug("Rapid input ignored for start", category: .timer)
             return
         }
@@ -67,7 +71,7 @@ final class TimerService {
 
     func pause() {
         guard state == .running else { return }
-        guard Date().timeIntervalSince(lastStateChangeDate) >= 0.3 else {
+        guard Date().timeIntervalSince(lastStateChangeDate) >= debounceInterval else {
             LoggingService.logDebug("Rapid input ignored for pause", category: .timer)
             return
         }
@@ -79,7 +83,7 @@ final class TimerService {
     }
 
     func reset() {
-        guard Date().timeIntervalSince(lastStateChangeDate) >= 0.3 else {
+        guard Date().timeIntervalSince(lastStateChangeDate) >= debounceInterval else {
             LoggingService.logDebug("Rapid input ignored for reset", category: .timer)
             return
         }
@@ -93,18 +97,17 @@ final class TimerService {
     }
 
     func skip() {
-        let completedType = currentSessionType
-        let completedDuration = totalDurationSeconds
-        LoggingService.logInfo("Timer skipped for \(completedType)", category: .timer)
+        let skippedType = currentSessionType
+        LoggingService.logInfo("Timer skipped for \(skippedType)", category: .timer)
         stopTimer()
         state = .idle
         remainingSeconds = 0
         sessionStartDate = nil
-        onSessionComplete?(completedType, completedDuration)
+        totalDurationSeconds = 0
+        advanceToNextSession()
     }
 
     private func durationForCurrentType() -> Int {
-        let defaults = UserDefaults.standard
         switch currentSessionType {
         case .pomodoro:
             let val = defaults.integer(forKey: UserDefaultsKeys.pomodoroDuration)
@@ -175,7 +178,7 @@ final class TimerService {
 
     func advanceToNextSession() {
         LoggingService.logDebug("Advancing from \(currentSessionType), cycle: \(completedPomodorosInCycle)", category: .timer)
-        let sessionsUntilLong = UserDefaults.standard.integer(forKey: UserDefaultsKeys.sessionsUntilLongBreak)
+        let sessionsUntilLong = defaults.integer(forKey: UserDefaultsKeys.sessionsUntilLongBreak)
         let maxSessions = sessionsUntilLong > 0 ? sessionsUntilLong : Constants.defaultSessionsUntilLongBreak
 
         switch currentSessionType {

@@ -5,13 +5,11 @@ import UniformTypeIdentifiers
 
 final class ExportService {
 
-    func exportAll(
+    func encodeExportData(
         sessions: [Session],
         achievements: [Achievement],
         dailyStats: [DailyStats]
-    ) async throws -> URL? {
-        LoggingService.logInfo("Starting data export (\(sessions.count) sessions, \(achievements.count) achievements, \(dailyStats.count) daily stats)", category: .data)
-
+    ) throws -> Data {
         let exportData = ExportData(
             exportDate: ISO8601DateFormatter().string(from: Date()),
             sessions: sessions.map { SessionExport(session: $0) },
@@ -22,13 +20,22 @@ final class ExportService {
 
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-        let data: Data
         do {
-            data = try encoder.encode(exportData)
+            return try encoder.encode(exportData)
         } catch {
             LoggingService.logError(.exportFailed("Encoding failed: \(error.localizedDescription)"), context: "exportAll")
             throw AppError.exportFailed("Failed to encode export data: \(error.localizedDescription)")
         }
+    }
+
+    func exportAll(
+        sessions: [Session],
+        achievements: [Achievement],
+        dailyStats: [DailyStats]
+    ) async throws -> URL? {
+        LoggingService.logInfo("Starting data export (\(sessions.count) sessions, \(achievements.count) achievements, \(dailyStats.count) daily stats)", category: .data)
+
+        let data = try encodeExportData(sessions: sessions, achievements: achievements, dailyStats: dailyStats)
 
         let panel = NSSavePanel()
         let formatter = DateFormatter()

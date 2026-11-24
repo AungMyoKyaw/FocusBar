@@ -7,6 +7,7 @@ final class TimerViewModel {
     var timerService: TimerService
     var notificationService: NotificationService
     var gamificationViewModel: GamificationViewModel
+    var remindersViewModel: RemindersViewModel
 
     var timerState: TimerState { timerService.state }
     var remainingSeconds: Int { timerService.remainingSeconds }
@@ -37,17 +38,25 @@ final class TimerViewModel {
 
     var modelContext: ModelContext?
     var currentError: AppError?
+    var displayError: AppError? { currentError ?? remindersViewModel.currentError }
     private var dailyPomodoroCount: Int = 0
 
     init(
         timerService: TimerService = TimerService(),
         notificationService: NotificationService = NotificationService(),
-        gamificationViewModel: GamificationViewModel = GamificationViewModel()
+        gamificationViewModel: GamificationViewModel = GamificationViewModel(),
+        remindersViewModel: RemindersViewModel = RemindersViewModel()
     ) {
         self.timerService = timerService
         self.notificationService = notificationService
         self.gamificationViewModel = gamificationViewModel
+        self.remindersViewModel = remindersViewModel
         setupCallbacks()
+    }
+
+    func clearError() {
+        currentError = nil
+        remindersViewModel.currentError = nil
     }
 
     func startFocus() {
@@ -85,6 +94,10 @@ final class TimerViewModel {
 
             if sessionType == .pomodoro {
                 self.dailyPomodoroCount += 1
+                if self.remindersViewModel.selectedReminder != nil {
+                    let minutes = max(1, duration / 60)
+                    Task { await self.remindersViewModel.logFocusTime(minutes: minutes) }
+                }
             }
 
             self.recordSession(type: sessionType, duration: duration, completed: true)
@@ -92,6 +105,7 @@ final class TimerViewModel {
             if let ctx = self.modelContext {
                 self.gamificationViewModel.processSessionComplete(
                     sessionType: sessionType,
+                    durationSeconds: duration,
                     dailyPomodoros: self.dailyPomodoroCount,
                     modelContext: ctx,
                     notificationService: self.notificationService
@@ -105,7 +119,9 @@ final class TimerViewModel {
                 self.notificationService.sendSessionComplete(sessionType: sessionType, nextSessionType: nextType)
             }
 
-            self.timerService.start()
+            if UserDefaults.standard.bool(forKey: UserDefaultsKeys.autoStartNextSession) {
+                self.timerService.start()
+            }
         }
     }
 
@@ -123,11 +139,19 @@ final class TimerViewModel {
             duration: duration,
             type: type,
             completed: completed,
+            reminderId: remindersViewModel.selectedReminder?.id,
+            reminderTitle: remindersViewModel.selectedReminder?.title,
             xpEarned: xp
         )
         session.endTime = Date()
         modelContext.insert(session)
-        try? modelContext.save()
+        do {
+            try modelContext.save()
+        } catch {
+            let appError = AppError.dataError("Failed to save session: \(error.localizedDescription)")
+            LoggingService.logError(appError, context: "recordSession")
+            currentError = appError
+        }
     }
 
     private func loadDailyPomodoroCount() {

@@ -8,7 +8,7 @@ A macOS menu bar Pomodoro timer with gamification and Apple Reminders integratio
 - **Framework**: SwiftUI (MenuBarExtra, Swift Charts)
 - **Persistence**: SwiftData + UserDefaults (@AppStorage)
 - **Integrations**: EventKit (Apple Reminders), UserNotifications
-- **Platform**: macOS 13.0+ (Ventura)
+- **Platform**: macOS 14.0+ (Sonoma)
 - **Language**: Swift 5.9+
 - **Architecture**: MVVM with Service layer
 
@@ -78,9 +78,7 @@ FocusBar/
 ├── Utilities/
 │   ├── Constants.swift                # 30-level XP table, 20 achievement definitions, app metadata
 │   └── UserDefaultsKeys.swift         # Type-safe keys + MenuBarDisplayMode enum + hasCompletedOnboarding
-├── Resources/
-│   ├── Assets.xcassets/               # App icon, accent color
-│   └── Sounds/                        # Notification sound files
+├── Assets.xcassets/                  # App icon, accent color
 ├── Views/Onboarding/
 │   ├── OnboardingContainerView.swift  # Step indicator + navigation (480×560 window)
 │   ├── WelcomeStepView.swift          # Step 1: app intro, feature highlights

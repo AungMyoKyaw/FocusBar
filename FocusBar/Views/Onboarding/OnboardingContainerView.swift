@@ -3,6 +3,7 @@ import SwiftUI
 struct OnboardingContainerView: View {
     @State private var viewModel = OnboardingViewModel()
     @Environment(\.dismiss) private var dismiss
+    var onDismiss: (() -> Void)?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -20,6 +21,7 @@ struct OnboardingContainerView: View {
                     reminderStatus: viewModel.reminderStatus,
                     onGetStarted: {
                         viewModel.completeOnboarding()
+                        onDismiss?()
                         dismiss()
                     }
                 )
