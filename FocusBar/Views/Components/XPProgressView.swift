@@ -12,21 +12,30 @@ struct XPProgressView: View {
             HStack {
                 Label("Lv.\(currentLevel)", systemImage: "leaf.fill")
                     .font(.caption.bold())
-                    .foregroundStyle(.green)
+                    .monospacedDigit()
+                    .foregroundStyle(FocusBarTheme.shortBreakAccent)
+
                 Spacer()
+
                 if currentStreak > 0 {
-                    Label("\(currentStreak)", systemImage: "flame.fill")
+                    Label("\(currentStreak)d", systemImage: "flame.fill")
                         .font(.caption.bold())
-                        .foregroundStyle(.orange)
+                        .monospacedDigit()
+                        .foregroundStyle(FocusBarTheme.streakAccent)
                 }
             }
 
             ProgressView(value: xpProgress)
-                .tint(.green)
+                .tint(FocusBarTheme.focusAccent)
 
-            Text("\(levelTitle) — \(currentXP) XP")
-                .font(.caption2)
-                .foregroundStyle(.secondary)
+            HStack {
+                Text(levelTitle)
+                Spacer()
+                Text("\(currentXP) XP")
+                    .monospacedDigit()
+            }
+            .font(.caption2)
+            .foregroundStyle(.secondary)
         }
         .accessibilityElement(children: .combine)
         .accessibilityLabel("Level \(currentLevel), \(levelTitle), \(currentXP) XP\(currentStreak > 0 ? ", \(currentStreak) day streak" : "")")

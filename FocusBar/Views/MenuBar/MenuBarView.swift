@@ -3,7 +3,14 @@ import SwiftData
 
 struct MenuBarView: View {
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.openWindow) private var openWindow
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @AppStorage(UserDefaultsKeys.sessionsUntilLongBreak) private var sessionsUntilLongBreak = Constants.defaultSessionsUntilLongBreak
     @State var timerViewModel: TimerViewModel
+
+    private var activeAccent: Color {
+        FocusBarTheme.accent(for: timerViewModel.currentSessionType)
+    }
 
     var body: some View {
         VStack(spacing: 12) {
@@ -12,12 +19,17 @@ struct MenuBarView: View {
                     timerViewModel.clearError()
                 }
             }
+
             headerSection
-            timerSection
+            timerRingSection
             controlsSection
+
             Divider()
+
             ReminderPicker(viewModel: timerViewModel.remindersViewModel)
+
             Divider()
+
             XPProgressView(
                 currentXP: timerViewModel.gamificationViewModel.currentXP,
                 currentLevel: timerViewModel.gamificationViewModel.currentLevel,
@@ -25,46 +37,96 @@ struct MenuBarView: View {
                 xpProgress: timerViewModel.gamificationViewModel.xpProgress,
                 currentStreak: timerViewModel.gamificationViewModel.currentStreak
             )
+
             Divider()
+
             navigationSection
         }
-        .padding()
-        .frame(width: 280)
+        .padding(14)
+        .frame(width: 300)
         .onAppear {
             timerViewModel.modelContext = modelContext
         }
     }
 
     private var headerSection: some View {
-        HStack {
+        HStack(spacing: 8) {
             Text("FocusBar")
                 .font(.headline)
-            Spacer()
+
             if timerViewModel.timerState != .idle {
                 Text(timerViewModel.currentSessionType.displayName)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(activeAccent)
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 2)
+                    .background(activeAccent.opacity(0.14), in: Capsule())
                     .accessibilityLabel("Current session: \(timerViewModel.currentSessionType.displayName)")
             }
+
+            Spacer()
+
+            cycleDots
         }
     }
 
-    private var timerSection: some View {
-        Group {
-            if timerViewModel.timerState != .idle {
-                VStack(spacing: 8) {
-                    Text(timerViewModel.formattedTime)
-                        .font(.system(size: 48, weight: .light, design: .monospaced))
-                        .foregroundStyle(timerViewModel.timerState == .paused ? .secondary : .primary)
-                        .accessibilityLabel("Time remaining: \(timerViewModel.formattedTime)")
-                        .accessibilityValue(timerViewModel.timerState == .paused ? "Paused" : "Running")
-
-                    Text("Session \(timerViewModel.completedPomodorosInCycle + 1)")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .accessibilityLabel("Session \(timerViewModel.completedPomodorosInCycle + 1) of cycle")
-                }
+    private var cycleDots: some View {
+        let total = max(1, sessionsUntilLongBreak)
+        return HStack(spacing: 4) {
+            ForEach(0..<total, id: \.self) { index in
+                Circle()
+                    .fill(index < timerViewModel.completedPomodorosInCycle ? activeAccent : Color.secondary.opacity(0.25))
+                    .frame(width: 6, height: 6)
             }
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("\(timerViewModel.completedPomodorosInCycle) of \(total) focus sessions in cycle")
+    }
+
+    private var timerRingSection: some View {
+        let isIdle = timerViewModel.timerState == .idle
+        let progress = isIdle ? 0 : timerViewModel.sessionProgress
+        let timeText = isIdle ? timerViewModel.configuredDurationFormatted : timerViewModel.formattedTime
+
+        return ZStack {
+            Circle()
+                .stroke(Color.secondary.opacity(0.16), lineWidth: FocusBarTheme.ringLineWidth)
+
+            Circle()
+                .trim(from: 0, to: progress)
+                .stroke(
+                    activeAccent,
+                    style: StrokeStyle(lineWidth: FocusBarTheme.ringLineWidth, lineCap: .round)
+                )
+                .rotationEffect(.degrees(-90))
+                .animation(reduceMotion ? nil : .linear(duration: 0.25), value: progress)
+
+            VStack(spacing: 2) {
+                Text(timeText)
+                    .font(.system(size: 34, weight: .light, design: .rounded))
+                    .monospacedDigit()
+                    .foregroundStyle(timerViewModel.timerState == .paused ? .secondary : .primary)
+
+                Text(statusCaption)
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .frame(width: FocusBarTheme.ringSize, height: FocusBarTheme.ringSize)
+        .padding(.vertical, 4)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(isIdle ? "Ready: \(timeText)" : "Time remaining: \(timeText)")
+        .accessibilityValue(statusCaption)
+    }
+
+    private var statusCaption: String {
+        switch timerViewModel.timerState {
+        case .idle:
+            return "Ready for \(timerViewModel.currentSessionType.displayName)"
+        case .running:
+            return "Session \(timerViewModel.completedPomodorosInCycle + 1)"
+        case .paused:
+            return "Paused"
         }
     }
 
@@ -74,14 +136,15 @@ struct MenuBarView: View {
                 Button {
                     timerViewModel.startFocus()
                 } label: {
-                    Label("Start Focus", systemImage: "play.fill")
+                    Label("Start \(timerViewModel.currentSessionType.displayName)", systemImage: "play.fill")
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.borderedProminent)
+                .tint(activeAccent)
                 .controlSize(.large)
-                .accessibilityHint("Starts a new focus session")
+                .accessibilityHint("Starts a new \(timerViewModel.currentSessionType.displayName.lowercased()) session")
             } else {
-                HStack(spacing: 12) {
+                HStack(spacing: 8) {
                     Button {
                         timerViewModel.togglePauseResume()
                     } label: {
@@ -92,42 +155,54 @@ struct MenuBarView: View {
                         .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.borderedProminent)
+                    .tint(activeAccent)
                     .controlSize(.regular)
                     .accessibilityLabel(timerViewModel.timerState == .paused ? "Resume timer" : "Pause timer")
                     .accessibilityHint(timerViewModel.timerState == .paused ? "Resumes the current session" : "Pauses the current session")
 
-                    Menu {
-                        Button("Skip") { timerViewModel.skip() }
-                        Button("Reset", role: .destructive) { timerViewModel.reset() }
+                    Button {
+                        timerViewModel.skip()
                     } label: {
-                        Image(systemName: "ellipsis.circle")
+                        Image(systemName: "forward.end.fill")
                     }
-                    .accessibilityLabel("More actions")
-                    .accessibilityHint("Skip or reset the current session")
+                    .buttonStyle(.bordered)
+                    .help("Skip to next session")
+                    .accessibilityLabel("Skip session")
+                    .accessibilityHint("Advances to the next session without awarding XP")
+
+                    Button(role: .destructive) {
+                        timerViewModel.reset()
+                    } label: {
+                        Image(systemName: "arrow.counterclockwise")
+                    }
+                    .buttonStyle(.bordered)
+                    .help("Reset timer")
+                    .accessibilityLabel("Reset timer")
+                    .accessibilityHint("Resets the current session to idle")
                 }
             }
         }
     }
 
-    @Environment(\.openWindow) private var openWindow
-
     private var navigationSection: some View {
-        VStack(spacing: 4) {
-            Button("Statistics") { openWindow(id: "stats") }
-                .buttonStyle(.plain)
-                .accessibilityHint("Opens the statistics window")
-            Button("Achievements") { openWindow(id: "achievements") }
-                .buttonStyle(.plain)
-                .accessibilityHint("Opens the achievements window")
-            Button("Settings...") { openWindow(id: "settings") }
-                .buttonStyle(.plain)
-                .accessibilityHint("Opens the settings window")
+        VStack(spacing: 2) {
+            MenuBarActionRow(title: "Statistics", systemImage: "chart.bar", hint: "Opens the statistics window") {
+                openWindow(id: "stats")
+                NSApp.activate(ignoringOtherApps: true)
+            }
+            MenuBarActionRow(title: "Achievements", systemImage: "trophy", hint: "Opens the achievements window") {
+                openWindow(id: "achievements")
+                NSApp.activate(ignoringOtherApps: true)
+            }
+            MenuBarActionRow(title: "Settings...", systemImage: "gearshape", hint: "Opens the settings window") {
+                openWindow(id: "settings")
+                NSApp.activate(ignoringOtherApps: true)
+            }
             Divider()
-            Button("Quit FocusBar") {
+                .padding(.vertical, 2)
+            MenuBarActionRow(title: "Quit FocusBar", systemImage: "power", hint: "Quits the application", isDestructive: true) {
                 NSApplication.shared.terminate(nil)
             }
-            .buttonStyle(.plain)
-            .accessibilityHint("Quits the application")
         }
     }
 }

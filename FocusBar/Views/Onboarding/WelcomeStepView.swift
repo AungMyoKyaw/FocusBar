@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 
 struct WelcomeStepView: View {
     let onContinue: () -> Void
@@ -7,24 +8,31 @@ struct WelcomeStepView: View {
         VStack(spacing: 24) {
             Spacer()
 
-            Image(systemName: "timer")
-                .font(.system(size: 64))
-                .foregroundStyle(Color.accentColor)
+            if let icon = NSApp.applicationIconImage {
+                Image(nsImage: icon)
+                    .resizable()
+                    .frame(width: 72, height: 72)
+            } else {
+                Image(systemName: "timer")
+                    .font(.system(size: 64))
+                    .foregroundStyle(Color.accentColor)
+            }
 
             Text("Welcome to FocusBar")
                 .font(.largeTitle)
                 .fontWeight(.bold)
 
-            Text("Your menu bar Pomodoro timer with gamification")
-                .font(.title3)
+            Text("A menu bar Pomodoro timer with Apple Reminders and streak tracking.")
+                .font(.body)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
+                .padding(.horizontal)
 
             VStack(alignment: .leading, spacing: 16) {
-                FeatureRow(icon: "clock.fill", title: "Focus Timer", description: "25-minute Pomodoro sessions from your menu bar")
-                FeatureRow(icon: "star.fill", title: "Earn XP & Level Up", description: "Gain experience and unlock achievements")
-                FeatureRow(icon: "flame.fill", title: "Build Streaks", description: "Stay consistent and watch your streak grow")
-                FeatureRow(icon: "checklist", title: "Link Reminders", description: "Connect sessions to your Apple Reminders")
+                FeatureRow(icon: "timer", title: "Focus Timer", description: "Run Pomodoro and break cycles from your menu bar")
+                FeatureRow(icon: "star.fill", title: "XP & Achievements", description: "Track progress across 30 levels and 20 milestones")
+                FeatureRow(icon: "flame.fill", title: "Daily Streaks", description: "Hit your daily target with automatic weekly freezes")
+                FeatureRow(icon: "checklist", title: "Apple Reminders", description: "Link sessions to tasks and log focus time")
             }
             .padding(.horizontal, 24)
 
