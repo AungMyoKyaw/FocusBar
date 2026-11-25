@@ -46,8 +46,25 @@ struct FocusBarApp: App {
             UserDefaultsKeys.sessionsUntilLongBreak: Constants.defaultSessionsUntilLongBreak,
             UserDefaultsKeys.dailyGoal: Constants.defaultDailyGoal,
             UserDefaultsKeys.bannerEnabled: true,
-            UserDefaultsKeys.soundEnabled: false,
+            UserDefaultsKeys.soundEnabled: true,
+            UserDefaultsKeys.focusEndSound: ChimeSound.glass.rawValue,
+            UserDefaultsKeys.breakEndSound: ChimeSound.ping.rawValue,
+            UserDefaultsKeys.soundVolume: 0.75,
+            UserDefaultsKeys.ambientSoundMode: AmbientSoundMode.off.rawValue,
+            UserDefaultsKeys.ambientVolume: 0.35,
             UserDefaultsKeys.autoStartNextSession: false,
+            UserDefaultsKeys.autoStartBreaks: false,
+            UserDefaultsKeys.autoStartFocus: false,
+            UserDefaultsKeys.overtimeEnabled: false,
+            UserDefaultsKeys.breakOverlayEnabled: false,
+            UserDefaultsKeys.globalHotkeysEnabled: true,
+            UserDefaultsKeys.calendarSyncEnabled: false,
+            UserDefaultsKeys.calendarName: Constants.defaultCalendarName,
+            UserDefaultsKeys.idleDetectionEnabled: false,
+            UserDefaultsKeys.idleThresholdMinutes: Constants.defaultIdleThresholdMinutes,
+            UserDefaultsKeys.distractionGuardEnabled: false,
+            UserDefaultsKeys.blockedBundleIDs: "",
+            UserDefaultsKeys.showEndTimeInMenuBar: false,
             UserDefaultsKeys.menuBarDisplayMode: MenuBarDisplayMode.timerText.rawValue,
         ])
 
@@ -71,6 +88,7 @@ struct FocusBarApp: App {
         let vm = TimerViewModel()
         vm.modelContext = container.mainContext
         vm.onLaunch()
+        FocusBarCommandBridge.shared.timerViewModel = vm
         _timerViewModel = State(initialValue: vm)
     }
 
@@ -78,6 +96,9 @@ struct FocusBarApp: App {
         MenuBarExtra {
             MenuBarView(timerViewModel: timerViewModel)
                 .modelContainer(sharedModelContainer)
+                .onOpenURL { url in
+                    handleURL(url)
+                }
         } label: {
             TimerDisplayView(timerViewModel: timerViewModel)
         }
@@ -89,22 +110,53 @@ struct FocusBarApp: App {
         .windowResizability(.contentSize)
 
         Window("Settings", id: "settings") {
-            SettingsView()
+            SettingsView(timerViewModel: timerViewModel)
                 .modelContainer(sharedModelContainer)
         }
-        .defaultSize(width: 520, height: 420)
+        .defaultSize(width: 560, height: 480)
         .windowResizability(.contentSize)
 
         Window("Statistics", id: "stats") {
             StatsView()
                 .modelContainer(sharedModelContainer)
         }
-        .defaultSize(width: 720, height: 580)
+        .defaultSize(width: 760, height: 640)
 
         Window("Achievements", id: "achievements") {
             AchievementsView()
                 .modelContainer(sharedModelContainer)
         }
         .defaultSize(width: 660, height: 580)
+    }
+
+    private func handleURL(_ url: URL) {
+        guard url.scheme?.lowercased() == "focusbar" else { return }
+        let action = (url.host ?? url.path.trimmingCharacters(in: CharacterSet(charactersIn: "/"))).lowercased()
+        let components = URLComponents(url: url, resolvingAgainstBaseURL: false)
+        let queryItems = components?.queryItems ?? []
+
+        switch action {
+        case "start":
+            if let task = queryItems.first(where: { $0.name == "task" })?.value {
+                timerViewModel.quickTaskTitle = task
+            }
+            if let minsStr = queryItems.first(where: { $0.name == "minutes" })?.value,
+               let mins = Int(minsStr), mins > 0 {
+                timerViewModel.selectSessionType(.pomodoro)
+                timerViewModel.timerService.start(duration: mins)
+            } else {
+                timerViewModel.startFocus()
+            }
+        case "pause":
+            timerViewModel.pause()
+        case "toggle":
+            timerViewModel.togglePauseResume()
+        case "skip":
+            timerViewModel.skip()
+        case "reset":
+            timerViewModel.reset()
+        default:
+            break
+        }
     }
 }

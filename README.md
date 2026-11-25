@@ -8,12 +8,12 @@
 
 <p align="center">
   A Swiss chronograph-inspired native macOS menu bar Pomodoro timer.<br />
-  Built with SwiftUI, SwiftData, Swift Charts, and Apple Reminders integration.
+  100% Free &amp; Open Source — built with SwiftUI, SwiftData, Swift Charts, EventKit, and AppIntents.
 </p>
 
 <p align="center">
   <a href="https://aungmyokyaw.github.io/FocusBar/"><strong>Website</strong></a> ·
-  <a href="https://github.com/AungMyoKyaw/FocusBar/releases/latest"><strong>Download</strong></a> ·
+  <a href="https://github.com/AungMyoKyaw/FocusBar/releases/latest"><strong>Download v2.0.0</strong></a> ·
   <a href="#installation"><strong>Homebrew</strong></a>
 </p>
 
@@ -27,37 +27,40 @@
 ---
 
 <p align="center">
-  <img src="docs/screenshots/menubar-timer.png" alt="FocusBar Chronograph Menu Bar Popover" width="360" />
+  <img src="docs/screenshots/menubar-active.png" alt="FocusBar Active Chronograph Timer Popover" width="340" />
+  &nbsp;&nbsp;
+  <img src="docs/screenshots/menubar-timer.png" alt="FocusBar Ready Chronograph Timer Popover" width="340" />
 </p>
 
 ## Highlights
 
-- **Precision Chronograph Dial**: Radial dial with 60 perimeter ticks, tabular non-jitter countdown typography, and quick `-5m` / `+5m` duration adjustments.
-- **Sleep & Wake Resilient**: Anchor date-based timer engine that maintains accurate session timing across system sleep, lock screen, and wake cycles.
-- **Apple Reminders Integration**: Select and link active Reminders tasks directly from the menu bar to log focused time without context switching.
-- **SwiftData & Swift Charts Dashboard**: Comprehensive statistics broken down by Day, Week, and Month with hourly distribution and task allocation graphs.
-- **Gamification & Streaks**: 30-level XP progression system, 20 milestone achievements, and daily streak tracking with automatic weekly freeze protection.
-- **Privacy First & Local-Only**: 100% offline. Zero telemetry, zero analytics, no account registration, and sandboxed SwiftData persistence.
-- **Refined macOS Craft**: Native materials, hairline card borders, and support for macOS Sonoma up to macOS Tahoe Liquid Glass.
+- **Precision Chronograph Dial**: Radial dial with 60 perimeter ticks, tabular non-jitter countdown typography, quick `-5m` / `+5m` idle adjustments, `+5m` active extension, and optional **Overtime Mode** (`+MM:SS` count-up).
+- **Draggable Multi-Size Floating Widget**: Pop out an always-on-top widget anywhere on screen with persistent placement and position lock. Right-click to switch between **Micro (Ring Only, 56×56)**, **Compact (Pill)**, and **Expanded (Dial)**.
+- **Quick Tasks, Tags & Apple Reminders**: Log what you're working on inline with `#Coding`, `#Design`, `#Writing`, `#Study`, `#Planning` tags, or link active Apple Reminders tasks via EventKit with post-session completion prompts.
+- **Apple Calendar & Shortcuts (`AppIntents`)**: Optional automatic time-block logging to Apple Calendar, native Siri/Shortcuts actions, `focusbar://` URL scheme (`start`, `pause`, `toggle`, `skip`, `reset`), and global hotkeys (`⌃⌥⌘S`, `⌃⌥⌘R`, `⌃⌥⌘N`).
+- **Offline Ambient Soundscapes & Custom Chimes**: Synthesized **Brown Noise**, **Soft Rain**, and **Swiss Tick** via `AVAudioEngine` (zero audio files or network calls) plus customizable Focus/Break completion chimes.
+- **Focus Protection**: Optional full-screen Liquid Glass break overlay, away/idle detection trim prompt (`CGEventSource`), and distracting-app activation nudges.
+- **Analytics, Heatmap & Data Portability**: Today / Week / Month / Year / All-Time stats, 16-week contribution heatmap, manual session logging & history management, CSV & JSON export, deduplicated JSON restore, and in-app GitHub Releases update checker.
+- **100% Free & Private**: Zero subscriptions, zero telemetry, sandboxed SwiftData storage.
 
 ---
 
 ## Screenshots
 
-### Main Timer
-<p align="center">
-  <img src="docs/screenshots/menubar-timer.png" alt="FocusBar Menu Bar Dial" width="340" />
-</p>
+### Menu Bar Chronograph (Active & Ready)
+| Active Focus Session | Ready State |
+| :------------------: | :---------: |
+| <img src="docs/screenshots/menubar-active.png" alt="FocusBar Active Dial" width="320" /> | <img src="docs/screenshots/menubar-timer.png" alt="FocusBar Ready Dial" width="320" /> |
 
 ### Analytics Dashboard
-Comprehensive focus hours, completed session counts, average session lengths, best day tracking, and hourly focus distribution charts across Today, This Week, and This Month.
+Comprehensive focus hours, completed session counts, average session lengths, best day tracking, 16-week heatmap, and hourly focus distribution charts.
 
 | Today | This Week | This Month |
 | :---: | :-------: | :--------: |
 | <img src="docs/screenshots/stats-today.png" alt="Statistics Today" width="280" /> | <img src="docs/screenshots/stats-week.png" alt="Statistics This Week" width="280" /> | <img src="docs/screenshots/stats-month.png" alt="Statistics This Month" width="280" /> |
 
 ### Gamification & Achievements
-Track your focus journey with level progression (from *Seedling* to *Focus Master*), XP rewards, and milestone badges.
+Track your focus journey with 30-level progression (from *Seedling* to *Focus Master*), XP rewards, streak freezes, and 20 milestone badges.
 
 | All Achievements | Locked Badges | Milestone Unlocks |
 | :--------------: | :-----------: | :---------------: |
@@ -81,17 +84,16 @@ brew install --cask aungmyokyaw/tap/focusbar
 
 ---
 
-## Usage
+## Usage & Shortcuts
 
-| Action | Control |
+| Action | Control / Shortcut |
 | :--- | :--- |
-| **Start / Pause Focus** | Click the large primary action button or press Space |
-| **Adjust Duration** | Click `-5m` or `+5m` pills inside the dial while idle |
-| **Switch Session Mode** | Click `Focus`, `Short`, or `Long` break chips |
-| **Link Apple Reminder** | Click `Connect` or tap the reminder pill to pick an active task |
-| **Open Statistics** | Click `Stats` in the footer navigation |
-| **Open Achievements** | Click `Badges` in the footer navigation |
-| **Settings** | Configure auto-start, launch at login, sounds, and menu bar icon styles |
+| **Start / Pause / Resume** | Primary button, `Space` in popover, or global `⌃⌥⌘S` |
+| **Reset Session** | `⌘R` in popover or global `⌃⌥⌘R` |
+| **Skip Session** | `⌘→` in popover or global `⌃⌥⌘N` |
+| **Floating Widget** | Click the PiP icon in the popover header; drag anywhere; right-click for Micro / Compact / Expanded sizes or Lock Position |
+| **Ambient Soundscape** | Click the waveform icon in the popover header to cycle Off / Brown Noise / Soft Rain / Swiss Tick |
+| **URL Scheme** | `focusbar://start?minutes=50&task=Ship+v2`, `focusbar://pause`, `focusbar://toggle`, `focusbar://skip`, `focusbar://reset` |
 
 ---
 
@@ -104,8 +106,6 @@ brew install --cask aungmyokyaw/tap/focusbar
 - Command Line Tools (`xcode-select --install`)
 
 ### Commands
-
-A convenient `Makefile` is included for rapid development:
 
 ```bash
 # Build debug binary
@@ -127,31 +127,11 @@ make stop
 make clean
 ```
 
-Or using `xcodebuild` directly:
-
-```bash
-# Build
-xcodebuild -project FocusBar.xcodeproj -scheme FocusBar -configuration Debug build
-
-# Unit tests
-xcodebuild test -project FocusBar.xcodeproj -scheme FocusBar -destination 'platform=macOS' -only-testing:FocusBarTests
-```
-
----
-
-## Architecture & Tech Stack
-
-- **UI & Layout**: SwiftUI with custom `FocusBarTheme` semantic tokens and radial canvas dial rendering.
-- **State & Timing**: Combine + anchor date delta calculations (`TimerService`) resilient to thread throttling and display sleep.
-- **Storage**: SwiftData models (`FocusSession`, `AchievementRecord`, `UserStreak`) local SQLite store.
-- **Integrations**: EventKit for Apple Reminders authorization and item fetching.
-- **Charts**: Swift Charts for hourly activity distribution.
-
 ---
 
 ## Release Process
 
-Push a semver version tag (`v1.1.0`, `v1.2.0`) to trigger the GitHub Actions release workflow:
+Push a semver version tag (`v2.0.0`) to trigger the GitHub Actions release workflow:
 1. Runs full test suite (`FocusBarTests`).
 2. Builds universal binary (`arm64` + `x86_64`).
 3. Ad-hoc codesigns and zips `FocusBar.app`.

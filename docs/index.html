@@ -4,17 +4,17 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>FocusBar — Native macOS Menu Bar Pomodoro Timer</title>
-  <meta name="description" content="Swiss chronograph-inspired native macOS menu bar Pomodoro timer with SwiftData analytics, 30-level XP progression, and Apple Reminders integration." />
+  <meta name="description" content="Swiss chronograph-inspired native macOS menu bar Pomodoro timer with draggable floating widget, Apple Reminders & Calendar sync, offline soundscapes, and SwiftData analytics. 100% free and open source." />
   <link rel="icon" type="image/svg+xml" href="favicon.svg" />
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://aungmyokyaw.github.io/FocusBar/" />
-  <meta property="og:title" content="FocusBar — Native macOS Menu Bar Pomodoro Timer" />
-  <meta property="og:description" content="Swiss chronograph-inspired native macOS menu bar Pomodoro timer with SwiftData analytics, XP progression, and Apple Reminders integration." />
-  <meta property="og:image" content="https://aungmyokyaw.github.io/FocusBar/screenshots/menubar-timer.png" />
+  <meta property="og:title" content="FocusBar v2.0 — Native macOS Menu Bar Pomodoro Timer" />
+  <meta property="og:description" content="Swiss chronograph-inspired native macOS menu bar Pomodoro timer with draggable floating widget, Apple Reminders & Calendar sync, offline soundscapes, and SwiftData analytics." />
+  <meta property="og:image" content="https://aungmyokyaw.github.io/FocusBar/screenshots/menubar-active.png" />
   <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:title" content="FocusBar — Native macOS Menu Bar Pomodoro Timer" />
-  <meta name="twitter:description" content="Swiss chronograph-inspired native macOS menu bar Pomodoro timer with SwiftData analytics, XP progression, and Apple Reminders integration." />
-  <meta name="twitter:image" content="https://aungmyokyaw.github.io/FocusBar/screenshots/menubar-timer.png" />
+  <meta name="twitter:title" content="FocusBar v2.0 — Native macOS Menu Bar Pomodoro Timer" />
+  <meta name="twitter:description" content="Swiss chronograph-inspired native macOS menu bar Pomodoro timer with draggable floating widget, Apple Reminders & Calendar sync, offline soundscapes, and SwiftData analytics." />
+  <meta name="twitter:image" content="https://aungmyokyaw.github.io/FocusBar/screenshots/menubar-active.png" />
   <style>
     :root {
       --bg: #0e0e10;
@@ -58,7 +58,7 @@
 
     body {
       background:
-        radial-gradient(900px 500px at 50% -120px, rgba(255, 91, 69, 0.12), transparent 65%),
+        radial-gradient(900px 500px at 50% -120px, rgba(255, 91, 69, 0.14), transparent 65%),
         radial-gradient(700px 420px at 85% 18%, rgba(59, 130, 246, 0.06), transparent 60%),
         var(--bg);
       min-height: 100vh;
@@ -173,7 +173,7 @@
 
     /* Hero */
     .hero {
-      padding: 68px 0 56px;
+      padding: 64px 0 52px;
     }
 
     .hero-grid {
@@ -215,7 +215,7 @@
     .hero-subtitle {
       font-size: 17px;
       color: var(--text-secondary);
-      max-width: 520px;
+      max-width: 530px;
       margin-bottom: 28px;
     }
 
@@ -268,7 +268,9 @@
 
     .hero-visual {
       display: flex;
-      justify-content: center;
+      flex-direction: column;
+      align-items: center;
+      gap: 14px;
     }
 
     .hero-visual img {
@@ -307,7 +309,7 @@
     .section-desc {
       color: var(--text-secondary);
       font-size: 15.5px;
-      max-width: 620px;
+      max-width: 640px;
     }
 
     /* Features Grid */
@@ -577,7 +579,7 @@
         <a href="#interface" class="nav-item">Interface</a>
         <a href="#install" class="nav-item">Install</a>
         <a href="https://github.com/AungMyoKyaw/FocusBar" class="nav-item" target="_blank" rel="noopener">GitHub</a>
-        <a href="https://github.com/AungMyoKyaw/FocusBar/releases/latest" class="btn btn-primary btn-sm" target="_blank" rel="noopener">Download v1.2.0</a>
+        <a href="https://github.com/AungMyoKyaw/FocusBar/releases/latest" class="btn btn-primary btn-sm" target="_blank" rel="noopener">Download v2.0.0</a>
       </nav>
     </div>
   </header>
@@ -588,16 +590,16 @@
         <div>
           <div class="hero-badge">
             <span class="hero-badge-dot" aria-hidden="true"></span>
-            <span class="tabular">macOS 14.0+ · Universal Binary · MIT Open Source</span>
+            <span class="tabular">v2.0.0 · 100% Free &amp; Open Source · macOS 14.0+</span>
           </div>
           <h1>A Swiss chronograph in your macOS menu bar.</h1>
           <p class="hero-subtitle">
-            FocusBar is a quiet, native Pomodoro timer built with SwiftUI, SwiftData, and Swift Charts. Stay on track with precision dial timing, Apple Reminders linking, and local-only analytics.
+            Native SwiftUI Pomodoro timer built for deep work. Now with a draggable multi-size floating widget, global hotkeys, Apple Calendar &amp; Reminders sync, offline soundscapes, and overtime mode.
           </p>
           <div class="hero-actions">
             <a href="https://github.com/AungMyoKyaw/FocusBar/releases/latest" class="btn btn-primary" target="_blank" rel="noopener">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-              Download for macOS
+              Download v2.0.0
             </a>
             <a href="https://github.com/AungMyoKyaw/FocusBar" class="btn btn-secondary" target="_blank" rel="noopener">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 .5C5.65.5.5 5.65.5 12c0 5.08 3.29 9.39 7.86 10.91.57.11.78-.25.78-.55 0-.27-.01-1.17-.02-2.12-3.2.7-3.87-1.36-3.87-1.36-.52-1.33-1.28-1.68-1.28-1.68-1.04-.71.08-.7.08-.7 1.15.08 1.76 1.18 1.76 1.18 1.03 1.76 2.69 1.25 3.35.96.1-.74.4-1.25.73-1.54-2.55-.29-5.24-1.28-5.24-5.68 0-1.25.45-2.28 1.18-3.08-.12-.29-.51-1.46.11-3.04 0 0 .97-.31 3.16 1.18a10.9 10.9 0 0 1 5.76 0c2.19-1.49 3.16-1.18 3.16-1.18.62 1.58.23 2.75.11 3.04.74.8 1.18 1.83 1.18 3.08 0 4.41-2.69 5.39-5.26 5.67.41.36.78 1.06.78 2.14 0 1.55-.01 2.79-.01 3.17 0 .31.21.67.79.55A11.51 11.51 0 0 0 23.5 12C23.5 5.65 18.35.5 12 .5Z"/></svg>
@@ -610,7 +612,11 @@
           </button>
         </div>
         <div class="hero-visual">
-          <img src="screenshots/menubar-timer.png" alt="FocusBar menu bar chronograph timer popover showing 25:00 ready state, Apple Reminders connect, and XP level progress" />
+          <img id="hero-img" src="screenshots/menubar-active.png" alt="FocusBar active 23:57 chronograph timer popover with session 1 of 4, Pause, Apple Reminders, and XP bar" />
+          <div class="segmented" role="tablist" aria-label="Menu bar state preview">
+            <button type="button" class="seg-btn active" role="tab" aria-selected="true" data-target="hero-img" data-src="screenshots/menubar-active.png" data-alt="FocusBar active 23:57 chronograph timer popover">Active</button>
+            <button type="button" class="seg-btn" role="tab" aria-selected="false" data-target="hero-img" data-src="screenshots/menubar-timer.png" data-alt="FocusBar ready 25:00 chronograph timer popover">Ready</button>
+          </div>
         </div>
       </div>
     </section>
@@ -618,10 +624,10 @@
     <section id="features">
       <div class="container">
         <div class="section-header">
-          <div class="section-eyebrow">Built for Deep Work</div>
-          <h2 class="section-title">Everything you need, nothing in the way.</h2>
+          <div class="section-eyebrow">Built for the Public Good</div>
+          <h2 class="section-title">Pro-grade focus tools, completely free.</h2>
           <p class="section-desc">
-            Designed to sit quietly in your menu bar with semantic macOS materials, crisp tabular numerals, and zero distractions.
+            Every feature unlocked out of the box — zero subscriptions, zero accounts, zero telemetry.
           </p>
         </div>
         <div class="features-grid">
@@ -629,43 +635,43 @@
             <div class="feature-icon icon-focus" aria-hidden="true">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/></svg>
             </div>
-            <h3>Swiss Chronograph Dial</h3>
-            <p>60 radial perimeter ticks, monospaced tabular numerals that never jitter, and quick -5m / +5m adjustments before you start.</p>
+            <h3>Chronograph Dial &amp; Overtime</h3>
+            <p>60-tick radial dial with tabular numerals, +5m extend while running, custom presets, and optional overtime count-up mode.</p>
           </article>
           <article class="card">
             <div class="feature-icon icon-short" aria-hidden="true">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4"/><path d="M12 18v4"/><path d="m4.93 4.93 2.83 2.83"/><path d="m16.24 16.24 2.83 2.83"/><path d="M2 12h4"/><path d="M18 12h4"/></svg>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="4"/><rect x="12" y="12" width="6" height="6" rx="1"/></svg>
             </div>
-            <h3>Sleep &amp; Wake Resilient</h3>
-            <p>Date-anchored timer state tracks elapsed time accurately across lid close, system sleep, and lock screen transitions.</p>
+            <h3>Draggable Floating Widget</h3>
+            <p>Drag anywhere on screen and persist placement. Right-click to switch between Micro (Ring Only), Compact Pill, and Expanded Dial.</p>
           </article>
           <article class="card">
             <div class="feature-icon icon-long" aria-hidden="true">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 3a3 3 0 0 0-3 3v12a3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3H6a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3V6a3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3h12a3 3 0 0 0 3-3 3 3 0 0 0-3-3z"/></svg>
             </div>
-            <h3>Apple Reminders Sync</h3>
-            <p>Link any focus block to an active Apple Reminders task via EventKit and automatically log focused minutes per task.</p>
+            <h3>Global Hotkeys &amp; Shortcuts</h3>
+            <p>Control sessions from any app with Ctrl+Opt+Cmd+S/R/N, native Apple Shortcuts (AppIntents), and focusbar:// URLs.</p>
+          </article>
+          <article class="card">
+            <div class="feature-icon icon-streak" aria-hidden="true">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+            </div>
+            <h3>Offline Soundscapes &amp; Chimes</h3>
+            <p>Synthesized Brown Noise, Soft Rain, and Swiss mechanical tick with zero audio files or network calls, plus custom chimes.</p>
           </article>
           <article class="card">
             <div class="feature-icon icon-long" aria-hidden="true">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
             </div>
-            <h3>Swift Charts Analytics</h3>
-            <p>Inspect focus hours, completed sessions, average length, best day, and hourly distribution across Today, Week, and Month views.</p>
-          </article>
-          <article class="card">
-            <div class="feature-icon icon-streak" aria-hidden="true">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>
-            </div>
-            <h3>XP, Levels &amp; Streaks</h3>
-            <p>Advance across 30 levels from Seedling upward, unlock 20 milestone badges, and protect daily streaks with weekly freezes.</p>
+            <h3>Reminders, Calendar &amp; Heatmap</h3>
+            <p>Sync Apple Reminders &amp; Calendar time-blocks, tag quick tasks, view 16-week heatmaps, edit history, and export CSV/JSON.</p>
           </article>
           <article class="card">
             <div class="feature-icon icon-short" aria-hidden="true">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
             </div>
-            <h3>100% Local &amp; Private</h3>
-            <p>Sandboxed macOS app using SwiftData on-device storage. Zero accounts, zero telemetry, and full JSON export whenever you want.</p>
+            <h3>Break Overlay, Idle &amp; Guard</h3>
+            <p>Optional full-screen break overlay, away-time trim detection, distraction app nudges, and 100% sandboxed SwiftData storage.</p>
           </article>
         </div>
       </div>
@@ -686,7 +692,7 @@
             <div class="showcase-bar">
               <div>
                 <h3>Statistics Dashboard</h3>
-                <p>Daily, weekly, and monthly focus metrics backed by SwiftData and Swift Charts.</p>
+                <p>Daily, weekly, monthly, yearly, and all-time focus metrics backed by SwiftData and Swift Charts.</p>
               </div>
               <div class="segmented" role="tablist" aria-label="Statistics timeframe">
                 <button type="button" class="seg-btn active" role="tab" aria-selected="true" data-target="stats-img" data-src="screenshots/stats-today.png" data-alt="FocusBar Statistics window showing Today view">Today</button>
@@ -747,7 +753,7 @@
             </div>
             <div>
               <a href="https://github.com/AungMyoKyaw/FocusBar/releases/latest" class="btn btn-primary" target="_blank" rel="noopener">
-                Download v1.2.0 (.zip)
+                Download v2.0.0 (.zip)
               </a>
             </div>
           </div>

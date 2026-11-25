@@ -3,6 +3,12 @@ import Foundation
 enum Constants {
 
     static let feedbackURL = "https://github.com/AungMyoKyaw/FocusBar/issues"
+    static let websiteURL = "https://aungmyokyaw.github.io/FocusBar/"
+    static let releasesAPIURL = "https://api.github.com/repos/AungMyoKyaw/FocusBar/releases/latest"
+    static let releasesPageURL = "https://github.com/AungMyoKyaw/FocusBar/releases/latest"
+    static let defaultTags = ["Coding", "Design", "Writing", "Study", "Planning"]
+    static let defaultCalendarName = "FocusBar"
+    static let defaultIdleThresholdMinutes = 5
 
     static var appVersion: String {
         Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"

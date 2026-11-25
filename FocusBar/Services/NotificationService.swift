@@ -29,11 +29,20 @@ final class NotificationService {
         }
     }
 
-    func sendSessionComplete(sessionType: SessionType, nextSessionType: SessionType) {
+    private var bannersAllowed: Bool {
+        UserDefaults.standard.bool(forKey: UserDefaultsKeys.bannerEnabled)
+    }
+
+    private var soundsAllowed: Bool {
+        UserDefaults.standard.bool(forKey: UserDefaultsKeys.soundEnabled)
+    }
+
+    func sendSessionComplete(sessionType: SessionType, nextSessionType: SessionType, includeSystemSound: Bool = false) {
+        guard bannersAllowed else { return }
         let content = UNMutableNotificationContent()
-        content.title = "\(sessionType.displayName) Complete!"
+        content.title = "\(sessionType.displayName) Complete"
         content.body = "Time for \(nextSessionType.displayName)"
-        content.sound = UserDefaults.standard.bool(forKey: UserDefaultsKeys.soundEnabled) ? .default : nil
+        content.sound = (includeSystemSound && soundsAllowed) ? .default : nil
 
         let request = UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil)
         LoggingService.logInfo("Sending notification: \(content.title)", category: .timer)
@@ -41,10 +50,11 @@ final class NotificationService {
     }
 
     func sendAchievementUnlocked(title: String, xpBonus: Int) {
+        guard bannersAllowed else { return }
         let content = UNMutableNotificationContent()
-        content.title = "Achievement Unlocked!"
+        content.title = "Achievement Unlocked"
         content.body = "\(title) (+\(xpBonus) XP)"
-        content.sound = .default
+        content.sound = soundsAllowed ? .default : nil
 
         let request = UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil)
         LoggingService.logInfo("Sending notification: \(content.title)", category: .gamification)
@@ -52,10 +62,11 @@ final class NotificationService {
     }
 
     func sendLevelUp(level: Int, title: String) {
+        guard bannersAllowed else { return }
         let content = UNMutableNotificationContent()
-        content.title = "Level Up!"
+        content.title = "Level Up"
         content.body = "You reached Level \(level): \(title)"
-        content.sound = .default
+        content.sound = soundsAllowed ? .default : nil
 
         let request = UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil)
         LoggingService.logInfo("Sending notification: \(content.title)", category: .gamification)
@@ -63,13 +74,29 @@ final class NotificationService {
     }
 
     func sendDailyGoalMet(streak: Int) {
+        guard bannersAllowed else { return }
         let content = UNMutableNotificationContent()
-        content.title = "Daily Goal Met!"
-        content.body = "You're on a \(streak)-day streak!"
-        content.sound = .default
+        content.title = "Daily Goal Met"
+        content.body = "You're on a \(streak)-day streak"
+        content.sound = soundsAllowed ? .default : nil
 
         let request = UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil)
         LoggingService.logInfo("Sending notification: \(content.title)", category: .gamification)
+        UNUserNotificationCenter.current().add(request)
+    }
+
+    func sendFocusGuardNudge(appName: String, taskTitle: String?) {
+        guard bannersAllowed else { return }
+        let content = UNMutableNotificationContent()
+        content.title = "Focus Guard: \(appName)"
+        if let taskTitle, !taskTitle.isEmpty {
+            content.body = "Stay locked in on \"\(taskTitle)\""
+        } else {
+            content.body = "You are currently in a Focus session"
+        }
+        content.sound = nil
+
+        let request = UNNotificationRequest(identifier: "focusbar.guard.\(appName)", content: content, trigger: nil)
         UNUserNotificationCenter.current().add(request)
     }
 }

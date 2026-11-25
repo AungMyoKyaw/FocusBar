@@ -8,13 +8,49 @@ final class TimerViewModel {
     var notificationService: NotificationService
     var gamificationViewModel: GamificationViewModel
     var remindersViewModel: RemindersViewModel
+    let soundService: SoundService
+    let hotkeyService: GlobalHotkeyService
+    let calendarService: CalendarService
+    let idleMonitorService: IdleMonitorService
+    let distractionGuardService: DistractionGuardService
+    let floatingPanelController = FloatingTimerPanelController()
+    let breakOverlayController = BreakOverlayController()
 
     var timerState: TimerState { timerService.state }
     var remainingSeconds: Int { timerService.remainingSeconds }
     var currentSessionType: SessionType { timerService.currentSessionType }
     var completedPomodorosInCycle: Int { timerService.completedPomodorosInCycle }
+    var isOvertime: Bool { timerService.isOvertime }
+    var overtimeSeconds: Int { timerService.overtimeSeconds }
+
+    var quickTaskTitle: String {
+        didSet { UserDefaults.standard.set(quickTaskTitle, forKey: UserDefaultsKeys.quickTaskTitle) }
+    }
+
+    var quickTaskTag: String {
+        didSet { UserDefaults.standard.set(quickTaskTag, forKey: UserDefaultsKeys.quickTaskTag) }
+    }
+
+    var ambientSoundMode: AmbientSoundMode {
+        didSet {
+            UserDefaults.standard.set(ambientSoundMode.rawValue, forKey: UserDefaultsKeys.ambientSoundMode)
+            syncAmbientAudio()
+        }
+    }
+
+    var isFloatingTimerVisible: Bool = false
+    var floatingWidgetSize: FloatingWidgetSize {
+        didSet { floatingPanelController.setSize(floatingWidgetSize) }
+    }
+    var pendingIdleTrimSeconds: Int?
+    var completedReminderPrompt: ReminderItem?
 
     var formattedTime: String {
+        if isOvertime {
+            let minutes = overtimeSeconds / 60
+            let seconds = overtimeSeconds % 60
+            return String(format: "+%02d:%02d", minutes, seconds)
+        }
         let minutes = remainingSeconds / 60
         let seconds = remainingSeconds % 60
         return String(format: "%02d:%02d", minutes, seconds)
@@ -38,7 +74,8 @@ final class TimerViewModel {
 
     var sessionProgress: Double {
         guard timerState != .idle else { return 0 }
-        let total = configuredDurationSeconds
+        if isOvertime { return 1 }
+        let total = max(timerService.totalDurationSeconds, configuredDurationSeconds)
         guard total > 0 else { return 0 }
         let ratio = 1.0 - (Double(remainingSeconds) / Double(total))
         return min(max(ratio, 0), 1)
@@ -60,7 +97,14 @@ final class TimerViewModel {
     }
 
     var menuBarTitle: String {
-        timerState == .idle ? "" : formattedTime
+        guard timerState != .idle else { return "" }
+        if UserDefaults.standard.bool(forKey: UserDefaultsKeys.showEndTimeInMenuBar),
+           let endDate = timerService.estimatedEndDate {
+            let fmt = DateFormatter()
+            fmt.dateFormat = "HH:mm"
+            return "\(formattedTime) · \(fmt.string(from: endDate))"
+        }
+        return formattedTime
     }
 
     var modelContext: ModelContext?
@@ -72,12 +116,27 @@ final class TimerViewModel {
         timerService: TimerService = TimerService(),
         notificationService: NotificationService = NotificationService(),
         gamificationViewModel: GamificationViewModel = GamificationViewModel(),
-        remindersViewModel: RemindersViewModel = RemindersViewModel()
+        remindersViewModel: RemindersViewModel = RemindersViewModel(),
+        soundService: SoundService = SoundService(),
+        hotkeyService: GlobalHotkeyService = GlobalHotkeyService(),
+        calendarService: CalendarService = CalendarService(),
+        idleMonitorService: IdleMonitorService = IdleMonitorService(),
+        distractionGuardService: DistractionGuardService = DistractionGuardService()
     ) {
         self.timerService = timerService
         self.notificationService = notificationService
         self.gamificationViewModel = gamificationViewModel
         self.remindersViewModel = remindersViewModel
+        self.soundService = soundService
+        self.hotkeyService = hotkeyService
+        self.calendarService = calendarService
+        self.idleMonitorService = idleMonitorService
+        self.distractionGuardService = distractionGuardService
+        self.quickTaskTitle = UserDefaults.standard.string(forKey: UserDefaultsKeys.quickTaskTitle) ?? ""
+        self.quickTaskTag = UserDefaults.standard.string(forKey: UserDefaultsKeys.quickTaskTag) ?? ""
+        let rawAmbient = UserDefaults.standard.string(forKey: UserDefaultsKeys.ambientSoundMode) ?? AmbientSoundMode.off.rawValue
+        self.ambientSoundMode = AmbientSoundMode(rawValue: rawAmbient) ?? .off
+        self.floatingWidgetSize = floatingPanelController.size
         setupCallbacks()
     }
 
@@ -87,11 +146,14 @@ final class TimerViewModel {
     }
 
     func startFocus() {
+        pendingIdleTrimSeconds = nil
         timerService.start()
+        syncActiveMonitors()
     }
 
     func pause() {
         timerService.pause()
+        syncActiveMonitors()
     }
 
     func togglePauseResume() {
@@ -99,19 +161,35 @@ final class TimerViewModel {
             pause()
         } else if timerState == .paused {
             startFocus()
+        } else {
+            startFocus()
         }
     }
 
     func reset() {
+        pendingIdleTrimSeconds = nil
         timerService.reset()
+        breakOverlayController.dismiss()
+        syncActiveMonitors()
     }
 
     func skip() {
+        pendingIdleTrimSeconds = nil
         timerService.skip()
+        breakOverlayController.dismiss()
+        syncActiveMonitors()
     }
 
     func selectSessionType(_ type: SessionType) {
         timerService.selectSessionType(type)
+    }
+
+    func extendActiveSession(by deltaMinutes: Int) {
+        timerService.extendActiveSession(by: deltaMinutes)
+    }
+
+    func completeOvertimeSession() {
+        timerService.completeOvertimeSession()
     }
 
     func adjustConfiguredDuration(by deltaMinutes: Int) {
@@ -135,20 +213,118 @@ final class TimerViewModel {
         UserDefaults.standard.set(clamped, forKey: durationKey)
     }
 
+    func toggleFloatingTimer() {
+        floatingPanelController.toggle(viewModel: self)
+        isFloatingTimerVisible = floatingPanelController.isVisible
+    }
+
+    func cycleFloatingWidgetSize() {
+        floatingPanelController.cycleSize()
+        floatingWidgetSize = floatingPanelController.size
+    }
+
+    func cycleAmbientSound() {
+        let all = AmbientSoundMode.allCases
+        if let idx = all.firstIndex(of: ambientSoundMode) {
+            ambientSoundMode = all[(idx + 1) % all.count]
+        }
+    }
+
+    func trimIdleTime() {
+        if let seconds = pendingIdleTrimSeconds {
+            timerService.trimElapsedSeconds(seconds)
+        }
+        pendingIdleTrimSeconds = nil
+    }
+
+    func dismissIdlePrompt() {
+        pendingIdleTrimSeconds = nil
+    }
+
+    func completeLinkedReminder() {
+        Task {
+            await remindersViewModel.completeSelectedReminder()
+            await MainActor.run {
+                completedReminderPrompt = nil
+            }
+        }
+    }
+
+    func dismissReminderPrompt() {
+        completedReminderPrompt = nil
+    }
+
+    func refreshHotkeysFromDefaults() {
+        let enabled = UserDefaults.standard.bool(forKey: UserDefaultsKeys.globalHotkeysEnabled)
+        hotkeyService.setEnabled(enabled)
+    }
+
     func onLaunch() {
         gamificationViewModel.checkStreakOnLaunch()
         loadDailyPomodoroCount()
+        refreshHotkeysFromDefaults()
     }
 
     private func setupCallbacks() {
+        hotkeyService.onStartPause = { [weak self] in
+            guard let self else { return }
+            if self.isOvertime {
+                self.completeOvertimeSession()
+            } else {
+                self.togglePauseResume()
+            }
+        }
+        hotkeyService.onReset = { [weak self] in
+            self?.reset()
+        }
+        hotkeyService.onSkip = { [weak self] in
+            self?.skip()
+        }
+
+        idleMonitorService.onReturnFromIdle = { [weak self] awaySeconds in
+            guard let self, self.timerState == .running, self.currentSessionType == .pomodoro else { return }
+            self.pendingIdleTrimSeconds = awaySeconds
+        }
+
+        distractionGuardService.onDistractingAppActivated = { [weak self] appName in
+            guard let self, self.timerState == .running, self.currentSessionType == .pomodoro else { return }
+            let task = self.resolvedSessionTitle
+            self.notificationService.sendFocusGuardNudge(appName: appName, taskTitle: task)
+        }
+
+        timerService.onOvertimeStart = { [weak self] sessionType in
+            guard let self else { return }
+            self.playCompletionChime(for: sessionType)
+        }
+
         timerService.onSessionComplete = { [weak self] sessionType, duration in
             guard let self else { return }
 
+            let linkedReminder = self.remindersViewModel.selectedReminder
+            let endDate = Date()
+            let startDate = endDate.addingTimeInterval(-Double(duration))
+
             if sessionType == .pomodoro {
                 self.dailyPomodoroCount += 1
-                if self.remindersViewModel.selectedReminder != nil {
+                if let linkedReminder {
                     let minutes = max(1, duration / 60)
                     Task { await self.remindersViewModel.logFocusTime(minutes: minutes) }
+                    self.completedReminderPrompt = linkedReminder
+                }
+
+                if UserDefaults.standard.bool(forKey: UserDefaultsKeys.calendarSyncEnabled) {
+                    let calendarName = UserDefaults.standard.string(forKey: UserDefaultsKeys.calendarName) ?? Constants.defaultCalendarName
+                    let eventTitle = "FocusBar: \(self.resolvedSessionTitle ?? "Focus Session")"
+                    let notes = self.quickTaskTag.isEmpty ? nil : "#\(self.quickTaskTag)"
+                    Task {
+                        await self.calendarService.logCompletedSession(
+                            title: eventTitle,
+                            startDate: startDate,
+                            endDate: endDate,
+                            notes: notes,
+                            calendarName: calendarName
+                        )
+                    }
                 }
             }
 
@@ -164,16 +340,80 @@ final class TimerViewModel {
                 )
             }
 
+            self.playCompletionChime(for: sessionType)
+
             self.timerService.advanceToNextSession()
             let nextType = self.timerService.currentSessionType
 
-            if UserDefaults.standard.bool(forKey: UserDefaultsKeys.bannerEnabled) {
-                self.notificationService.sendSessionComplete(sessionType: sessionType, nextSessionType: nextType)
+            self.notificationService.sendSessionComplete(
+                sessionType: sessionType,
+                nextSessionType: nextType,
+                includeSystemSound: false
+            )
+
+            let shouldAutoStart: Bool
+            if nextType == .pomodoro {
+                shouldAutoStart = UserDefaults.standard.bool(forKey: UserDefaultsKeys.autoStartFocus)
+                    || UserDefaults.standard.bool(forKey: UserDefaultsKeys.autoStartNextSession)
+            } else {
+                shouldAutoStart = UserDefaults.standard.bool(forKey: UserDefaultsKeys.autoStartBreaks)
+                    || UserDefaults.standard.bool(forKey: UserDefaultsKeys.autoStartNextSession)
             }
 
-            if UserDefaults.standard.bool(forKey: UserDefaultsKeys.autoStartNextSession) {
+            if shouldAutoStart {
                 self.timerService.start()
+                if nextType != .pomodoro,
+                   UserDefaults.standard.bool(forKey: UserDefaultsKeys.breakOverlayEnabled) {
+                    self.breakOverlayController.show(viewModel: self)
+                }
             }
+
+            self.syncActiveMonitors()
+        }
+    }
+
+    private var resolvedSessionTitle: String? {
+        let trimmed = quickTaskTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmed.isEmpty { return trimmed }
+        return remindersViewModel.selectedReminder?.title
+    }
+
+    private func playCompletionChime(for sessionType: SessionType) {
+        guard UserDefaults.standard.bool(forKey: UserDefaultsKeys.soundEnabled) else { return }
+        let key = sessionType == .pomodoro ? UserDefaultsKeys.focusEndSound : UserDefaultsKeys.breakEndSound
+        let rawSound = UserDefaults.standard.string(forKey: key) ?? ChimeSound.glass.rawValue
+        let sound = ChimeSound(rawValue: rawSound) ?? .glass
+        let storedVol = UserDefaults.standard.object(forKey: UserDefaultsKeys.soundVolume) as? Double ?? 0.75
+        soundService.playChime(sound, volume: Float(storedVol))
+    }
+
+    private func syncActiveMonitors() {
+        syncAmbientAudio()
+
+        let isRunningFocus = timerState == .running && currentSessionType == .pomodoro
+        if isRunningFocus && UserDefaults.standard.bool(forKey: UserDefaultsKeys.idleDetectionEnabled) {
+            let threshold = UserDefaults.standard.integer(forKey: UserDefaultsKeys.idleThresholdMinutes)
+            idleMonitorService.startMonitoring(thresholdMinutes: threshold > 0 ? threshold : Constants.defaultIdleThresholdMinutes)
+        } else {
+            idleMonitorService.stopMonitoring()
+        }
+
+        if isRunningFocus && UserDefaults.standard.bool(forKey: UserDefaultsKeys.distractionGuardEnabled) {
+            let rawIDs = UserDefaults.standard.string(forKey: UserDefaultsKeys.blockedBundleIDs) ?? ""
+            let ids = rawIDs.split(separator: ",").map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty }
+            distractionGuardService.startMonitoring(blockedBundleIDs: ids)
+        } else {
+            distractionGuardService.stopMonitoring()
+        }
+    }
+
+    private func syncAmbientAudio() {
+        let isRunningFocus = timerState == .running && currentSessionType == .pomodoro
+        if isRunningFocus && ambientSoundMode != .off {
+            let vol = UserDefaults.standard.object(forKey: UserDefaultsKeys.ambientVolume) as? Double ?? 0.35
+            soundService.startAmbient(mode: ambientSoundMode, volume: Float(vol))
+        } else {
+            soundService.stopAmbient()
         }
     }
 
@@ -186,6 +426,11 @@ final class TimerViewModel {
             dailyGoalJustMet: false
         ).totalXP : 0
 
+        let trimmedTask = quickTaskTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedTag = quickTaskTag.trimmingCharacters(in: .whitespacesAndNewlines)
+        let baseSeconds = timerService.totalDurationSeconds > 0 ? timerService.totalDurationSeconds : duration
+        let overtime = max(0, duration - baseSeconds)
+
         let session = Session(
             startTime: Date().addingTimeInterval(-Double(duration)),
             duration: duration,
@@ -193,7 +438,11 @@ final class TimerViewModel {
             completed: completed,
             reminderId: remindersViewModel.selectedReminder?.id,
             reminderTitle: remindersViewModel.selectedReminder?.title,
-            xpEarned: xp
+            xpEarned: xp,
+            taskTitle: trimmedTask.isEmpty ? nil : trimmedTask,
+            tag: trimmedTag.isEmpty ? nil : trimmedTag,
+            notes: nil,
+            overtimeSeconds: overtime
         )
         session.endTime = Date()
         modelContext.insert(session)

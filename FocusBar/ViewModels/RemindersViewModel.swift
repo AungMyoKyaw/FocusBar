@@ -49,4 +49,18 @@ final class RemindersViewModel {
             }
         }
     }
+
+    func completeSelectedReminder() async {
+        guard let reminder = selectedReminder else { return }
+        do {
+            try await reminderService.markComplete(reminderId: reminder.id)
+            selectedReminder = nil
+            await loadReminders()
+        } catch {
+            if let appError = error as? AppError {
+                currentError = appError
+                LoggingService.logError(appError, context: "completeSelectedReminder")
+            }
+        }
+    }
 }

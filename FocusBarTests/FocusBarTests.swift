@@ -366,3 +366,157 @@ struct TimerViewModelTests {
         #expect(UserDefaults.standard.integer(forKey: UserDefaultsKeys.shortBreakDuration) == 60)
     }
 }
+
+@MainActor
+struct V2FeatureTests {
+
+    @Test func extendActiveSessionAndTrimIdleSeconds() throws {
+        let suiteName = "FocusBarTests.ExtendTrim.\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        let service = TimerService(defaults: defaults, debounceInterval: 0)
+        service.start(duration: 25)
+        #expect(service.remainingSeconds == 1500)
+
+        service.extendActiveSession(by: 5)
+        #expect(service.totalDurationSeconds == 1800)
+        #expect(service.remainingSeconds >= 1798)
+
+        service.pause()
+        let pausedBeforeTrim = service.remainingSeconds
+        service.trimElapsedSeconds(120)
+        #expect(service.remainingSeconds == min(service.totalDurationSeconds, pausedBeforeTrim + 120))
+    }
+
+    @Test func overtimeModeCompletesAndFiresCallback() throws {
+        let suiteName = "FocusBarTests.Overtime.\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        defaults.set(true, forKey: UserDefaultsKeys.overtimeEnabled)
+
+        let service = TimerService(defaults: defaults, debounceInterval: 0)
+        var completedDuration: Int?
+        service.onSessionComplete = { _, duration in
+            completedDuration = duration
+        }
+
+        service.start(duration: 1)
+        service.isOvertime = true
+        service.overtimeSeconds = 95
+        service.completeOvertimeSession()
+
+        #expect(service.state == .idle)
+        #expect(service.isOvertime == false)
+        #expect(completedDuration == 155)
+    }
+
+    @Test func exportCSVAndImportJSONDeduplicates() throws {
+        let schema = Schema([Session.self, DailyStats.self, Achievement.self])
+        let config = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
+        let container = try ModelContainer(for: schema, configurations: [config])
+        let context = container.mainContext
+
+        let session = Session(
+            startTime: Date(),
+            duration: 1500,
+            type: .pomodoro,
+            completed: true,
+            xpEarned: 30,
+            taskTitle: "Build v2.0",
+            tag: "Coding",
+            notes: "Shipped features",
+            overtimeSeconds: 45
+        )
+        context.insert(session)
+        try context.save()
+
+        let service = ExportService()
+        let csv = service.encodeCSV(sessions: [session])
+        #expect(csv.contains("Build v2.0"))
+        #expect(csv.contains("Coding"))
+        #expect(csv.contains("45"))
+
+        let json = try service.encodeExportData(sessions: [session], achievements: [], dailyStats: [])
+        let decoded = try service.decodeExportData(json)
+        let firstSummary = try service.applyImport(decoded, modelContext: context)
+        #expect(firstSummary.sessionsImported == 0)
+
+        let container2 = try ModelContainer(for: schema, configurations: [ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)])
+        let secondSummary = try service.applyImport(decoded, modelContext: container2.mainContext)
+        #expect(secondSummary.sessionsImported == 1)
+    }
+
+    @Test func statsViewModelManualSessionHeatmapAndAllTime() throws {
+        let schema = Schema([Session.self, DailyStats.self, Achievement.self])
+        let config = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
+        let container = try ModelContainer(for: schema, configurations: [config])
+        let context = container.mainContext
+
+        let vm = StatsViewModel()
+        vm.timeRange = .allTime
+        vm.addManualSession(
+            durationMinutes: 45,
+            taskTitle: "Architecture",
+            tag: "Design",
+            notes: "Offline whiteboard",
+            date: Date(),
+            modelContext: context
+        )
+
+        #expect(vm.totalSessions == 1)
+        #expect(vm.taskBreakdown.first?.title == "Architecture")
+        #expect(vm.taskBreakdown.first?.minutes == 45)
+        #expect(vm.heatmapDays.count == 112)
+        #expect(vm.heatmapDays.last?.count == 1)
+
+        if let saved = vm.sessions.first {
+            vm.deleteSession(saved, modelContext: context)
+        }
+        #expect(vm.totalSessions == 0)
+    }
+
+    @Test func updateCheckSemverComparison() {
+        #expect(UpdateCheckService.isVersion("1.3.0", newerThan: "1.2.0") == true)
+        #expect(UpdateCheckService.isVersion("v2.0.0", newerThan: "1.9.9") == true)
+        #expect(UpdateCheckService.isVersion("1.2.0", newerThan: "1.2.0") == false)
+        #expect(UpdateCheckService.isVersion("1.1.9", newerThan: "1.2.0") == false)
+    }
+
+    @Test func customPresetsRoundTrip() throws {
+        let suiteName = "FocusBarTests.Presets.\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        let custom = [TimerPreset(name: "Deep 60/15", focusMinutes: 60, shortBreakMinutes: 15, longBreakMinutes: 30)]
+        TimerPreset.saveCustomPresets(custom, to: defaults)
+        let loaded = TimerPreset.loadCustomPresets(from: defaults)
+        #expect(loaded == custom)
+    }
+
+    @Test func floatingWidgetSizeCyclingAndLockState() throws {
+        let suiteName = "FocusBarTests.FloatingWidget.\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        #expect(FloatingWidgetSize.micro.dimensions == CGSize(width: 56, height: 56))
+        #expect(FloatingWidgetSize.compact.dimensions == CGSize(width: 224, height: 54))
+        #expect(FloatingWidgetSize.expanded.dimensions == CGSize(width: 176, height: 204))
+
+        let controller = FloatingTimerPanelController(defaults: defaults)
+        #expect(controller.size == .compact)
+        #expect(controller.isLocked == false)
+
+        controller.cycleSize()
+        #expect(controller.size == .expanded)
+        #expect(defaults.string(forKey: UserDefaultsKeys.floatingWidgetSize) == FloatingWidgetSize.expanded.rawValue)
+
+        controller.cycleSize()
+        #expect(controller.size == .micro)
+
+        controller.setLocked(true)
+        #expect(controller.isLocked == true)
+        #expect(defaults.bool(forKey: UserDefaultsKeys.floatingWidgetLocked) == true)
+    }
+}
+

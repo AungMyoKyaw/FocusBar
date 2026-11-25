@@ -4,6 +4,7 @@ import SwiftData
 struct StatsView: View {
     @Environment(\.modelContext) private var modelContext
     @State private var viewModel = StatsViewModel()
+    @State private var showingManualEntry = false
 
     private var peakHourSummary: String? {
         guard let peak = viewModel.focusByHour.max(by: { $0.count < $1.count }), peak.count > 0 else {
@@ -27,12 +28,24 @@ struct StatsView: View {
                     }
                 }
 
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Statistics")
-                        .font(.title.bold())
-                    Text(viewModel.timeRange.rawValue)
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
+                HStack(alignment: .bottom) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Statistics")
+                            .font(.title.bold())
+                        Text(viewModel.timeRange.rawValue)
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+
+                    Spacer()
+
+                    Button {
+                        showingManualEntry = true
+                    } label: {
+                        Label("Log Session", systemImage: "plus")
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
                 }
 
                 LazyVGrid(
@@ -79,6 +92,12 @@ struct StatsView: View {
                     .accessibilityLabel("Best day: \(viewModel.bestDayPomodoros) pomodoros")
                 }
 
+                if !viewModel.heatmapDays.isEmpty {
+                    DashboardChartCard(title: "16-Week Activity", badge: "Last 112 days") {
+                        FocusHeatmapChart(days: viewModel.heatmapDays)
+                    }
+                }
+
                 if viewModel.totalSessions == 0 {
                     emptyStateCard
                 } else {
@@ -93,13 +112,61 @@ struct StatsView: View {
                                 .frame(height: max(160, CGFloat(min(viewModel.taskBreakdown.count, 8)) * 30))
                         }
                     }
+
+                    DashboardChartCard(title: "Recent Sessions", badge: "\(viewModel.completedPomodoros.count) total") {
+                        VStack(spacing: 8) {
+                            ForEach(viewModel.completedPomodoros.prefix(25), id: \.id) { session in
+                                HStack(spacing: 10) {
+                                    Circle()
+                                        .fill(FocusBarTheme.focusAccent)
+                                        .frame(width: 6, height: 6)
+
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text(session.displayTaskTitle)
+                                            .font(.subheadline.weight(.medium))
+                                            .lineLimit(1)
+                                        Text(session.startTime.formatted(date: .abbreviated, time: .shortened))
+                                            .font(.caption2)
+                                            .foregroundStyle(.secondary)
+                                    }
+
+                                    Spacer()
+
+                                    if let tag = session.tag, !tag.isEmpty {
+                                        Text("#\(tag)")
+                                            .font(.caption2.weight(.semibold))
+                                            .foregroundStyle(FocusBarTheme.longBreakAccent)
+                                            .padding(.horizontal, 6)
+                                            .padding(.vertical, 2)
+                                            .background(FocusBarTheme.longBreakAccent.opacity(0.14), in: Capsule())
+                                    }
+
+                                    Text("\(max(1, session.duration / 60))m")
+                                        .font(.caption.weight(.semibold))
+                                        .monospacedDigit()
+                                        .foregroundStyle(.secondary)
+
+                                    Button(role: .destructive) {
+                                        viewModel.deleteSession(session, modelContext: modelContext)
+                                    } label: {
+                                        Image(systemName: "trash")
+                                            .font(.caption)
+                                            .foregroundStyle(.secondary)
+                                    }
+                                    .buttonStyle(.plain)
+                                    .help("Delete session")
+                                }
+                                .padding(.vertical, 4)
+                            }
+                        }
+                    }
                 }
             }
             .frame(maxWidth: 860, alignment: .leading)
             .padding(24)
             .frame(maxWidth: .infinity)
         }
-        .frame(minWidth: 620, minHeight: 480)
+        .frame(minWidth: 640, minHeight: 500)
         .toolbar {
             ToolbarItem(placement: .principal) {
                 Picker("Range", selection: $viewModel.timeRange) {
@@ -111,6 +178,18 @@ struct StatsView: View {
                 .labelsHidden()
                 .accessibilityLabel("Time range filter")
                 .accessibilityValue(viewModel.timeRange.rawValue)
+            }
+        }
+        .sheet(isPresented: $showingManualEntry) {
+            ManualSessionSheet { minutes, task, tag, notes, date in
+                viewModel.addManualSession(
+                    durationMinutes: minutes,
+                    taskTitle: task,
+                    tag: tag,
+                    notes: notes,
+                    date: date,
+                    modelContext: modelContext
+                )
             }
         }
         .onAppear { viewModel.loadStats(modelContext: modelContext) }
@@ -131,16 +210,62 @@ struct StatsView: View {
             Text("No Completed Sessions")
                 .font(.headline)
 
-            Text("Complete a focus session to see your hourly distribution and task breakdown.")
+            Text("Complete a focus session or click Log Session to record offline deep work.")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
-                .frame(maxWidth: 320)
+                .frame(maxWidth: 340)
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 48)
         .padding(.horizontal, 24)
         .focusCardSurface()
+    }
+}
+
+private struct ManualSessionSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @State private var durationMinutes: Int = 25
+    @State private var taskTitle: String = ""
+    @State private var selectedTag: String = ""
+    @State private var notes: String = ""
+    @State private var date: Date = Date()
+
+    let onSave: (Int, String, String, String, Date) -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Log Focus Session")
+                .font(.headline)
+
+            Form {
+                Stepper("Duration: \(durationMinutes) min", value: $durationMinutes, in: 1...240)
+                    .monospacedDigit()
+                TextField("Task", text: $taskTitle)
+                Picker("Tag", selection: $selectedTag) {
+                    Text("None").tag("")
+                    ForEach(Constants.defaultTags, id: \.self) { tag in
+                        Text("#\(tag)").tag(tag)
+                    }
+                }
+                DatePicker("Start Time", selection: $date)
+                TextField("Notes (optional)", text: $notes)
+            }
+            .formStyle(.grouped)
+
+            HStack {
+                Spacer()
+                Button("Cancel") { dismiss() }
+                    .keyboardShortcut(.escape, modifiers: [])
+                Button("Save Session") {
+                    onSave(durationMinutes, taskTitle, selectedTag, notes, date)
+                    dismiss()
+                }
+                .buttonStyle(.borderedProminent)
+            }
+        }
+        .padding(20)
+        .frame(width: 400)
     }
 }
 

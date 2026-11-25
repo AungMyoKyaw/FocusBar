@@ -126,3 +126,39 @@ struct TaskBreakdownChart: View {
         .accessibilityLabel("Task breakdown chart showing \(min(data.count, 8)) tasks")
     }
 }
+
+struct FocusHeatmapChart: View {
+    let days: [(date: Date, count: Int)]
+
+    private var weeks: [[(date: Date, count: Int)]] {
+        stride(from: 0, to: days.count, by: 7).map { idx in
+            Array(days[idx..<min(idx + 7, days.count)])
+        }
+    }
+
+    var body: some View {
+        HStack(spacing: 4) {
+            ForEach(weeks.indices, id: \.self) { weekIdx in
+                VStack(spacing: 4) {
+                    ForEach(weeks[weekIdx].indices, id: \.self) { dayIdx in
+                        let item = weeks[weekIdx][dayIdx]
+                        RoundedRectangle(cornerRadius: 3, style: .continuous)
+                            .fill(cellColor(for: item.count))
+                            .frame(width: 12, height: 12)
+                            .help("\(item.date.formatted(date: .abbreviated, time: .omitted)): \(item.count) sessions")
+                    }
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func cellColor(for count: Int) -> Color {
+        switch count {
+        case 0: return Color.primary.opacity(0.06)
+        case 1...2: return FocusBarTheme.focusAccent.opacity(0.35)
+        case 3...4: return FocusBarTheme.focusAccent.opacity(0.65)
+        default: return FocusBarTheme.focusAccent
+        }
+    }
+}

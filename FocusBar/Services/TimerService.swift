@@ -13,14 +13,17 @@ final class TimerService {
     var remainingSeconds: Int = 0
     var currentSessionType: SessionType = .pomodoro
     var completedPomodorosInCycle: Int = 0
+    var isOvertime: Bool = false
+    var overtimeSeconds: Int = 0
+    private(set) var totalDurationSeconds: Int = 0
 
     var onSessionComplete: ((SessionType, Int) -> Void)?
+    var onOvertimeStart: ((SessionType) -> Void)?
     var onTick: ((Int) -> Void)?
 
     private var sessionStartDate: Date?
     private var pausedRemainingSeconds: Int = 0
     private var timer: Timer?
-    private var totalDurationSeconds: Int = 0
 
     private let defaults: UserDefaults
     private let debounceInterval: TimeInterval
@@ -40,6 +43,11 @@ final class TimerService {
         if let wakeObserver { NSWorkspace.shared.notificationCenter.removeObserver(wakeObserver) }
     }
 
+    var estimatedEndDate: Date? {
+        guard state == .running, !isOvertime else { return nil }
+        return Date().addingTimeInterval(TimeInterval(remainingSeconds))
+    }
+
     func start(duration: Int? = nil) {
         guard Date().timeIntervalSince(lastStateChangeDate) >= debounceInterval else {
             LoggingService.logDebug("Rapid input ignored for start", category: .timer)
@@ -50,16 +58,22 @@ final class TimerService {
         switch state {
         case .idle:
             let durationMinutes = duration ?? durationForCurrentType()
-            totalDurationSeconds = durationMinutes * 60
+            totalDurationSeconds = max(1, durationMinutes) * 60
             remainingSeconds = totalDurationSeconds
+            isOvertime = false
+            overtimeSeconds = 0
             sessionStartDate = Date()
             state = .running
             LoggingService.logInfo("Timer started for \(currentSessionType) (\(durationMinutes) min)", category: .timer)
             startTimer()
 
         case .paused:
-            let elapsed = totalDurationSeconds - pausedRemainingSeconds
-            sessionStartDate = Date().addingTimeInterval(-Double(elapsed))
+            if isOvertime {
+                sessionStartDate = Date().addingTimeInterval(-Double(totalDurationSeconds + overtimeSeconds))
+            } else {
+                let elapsed = totalDurationSeconds - pausedRemainingSeconds
+                sessionStartDate = Date().addingTimeInterval(-Double(elapsed))
+            }
             state = .running
             LoggingService.logInfo("Timer resumed for \(currentSessionType)", category: .timer)
             startTimer()
@@ -92,6 +106,8 @@ final class TimerService {
         stopTimer()
         state = .idle
         remainingSeconds = 0
+        isOvertime = false
+        overtimeSeconds = 0
         sessionStartDate = nil
         totalDurationSeconds = 0
     }
@@ -102,9 +118,63 @@ final class TimerService {
         stopTimer()
         state = .idle
         remainingSeconds = 0
+        isOvertime = false
+        overtimeSeconds = 0
         sessionStartDate = nil
         totalDurationSeconds = 0
         advanceToNextSession()
+    }
+
+    func extendActiveSession(by deltaMinutes: Int) {
+        guard state != .idle, !isOvertime else { return }
+        let deltaSeconds = deltaMinutes * 60
+        let newTotal = min(max(totalDurationSeconds + deltaSeconds, 60), 10_800)
+        let appliedDelta = newTotal - totalDurationSeconds
+        guard appliedDelta != 0 else { return }
+
+        totalDurationSeconds = newTotal
+        if state == .running {
+            remainingSeconds = max(1, remainingSeconds + appliedDelta)
+        } else if state == .paused {
+            pausedRemainingSeconds = max(1, pausedRemainingSeconds + appliedDelta)
+            remainingSeconds = pausedRemainingSeconds
+        }
+        LoggingService.logInfo("Extended active session by \(appliedDelta / 60)m (total: \(totalDurationSeconds / 60)m)", category: .timer)
+    }
+
+    func trimElapsedSeconds(_ seconds: Int) {
+        guard state != .idle, seconds > 0 else { return }
+        if isOvertime {
+            overtimeSeconds = max(0, overtimeSeconds - seconds)
+            if let startDate = sessionStartDate {
+                sessionStartDate = startDate.addingTimeInterval(TimeInterval(seconds))
+            }
+            return
+        }
+        if state == .running, let startDate = sessionStartDate {
+            let newStart = min(Date(), startDate.addingTimeInterval(TimeInterval(seconds)))
+            sessionStartDate = newStart
+            let elapsed = Int(Date().timeIntervalSince(newStart))
+            remainingSeconds = max(0, totalDurationSeconds - elapsed)
+        } else if state == .paused {
+            pausedRemainingSeconds = min(totalDurationSeconds, pausedRemainingSeconds + seconds)
+            remainingSeconds = pausedRemainingSeconds
+        }
+    }
+
+    func completeOvertimeSession() {
+        guard isOvertime else { return }
+        let completedDuration = totalDurationSeconds + overtimeSeconds
+        let completedType = currentSessionType
+        LoggingService.logInfo("Overtime session completed: \(completedType) (\(completedDuration)s)", category: .timer)
+        stopTimer()
+        state = .idle
+        remainingSeconds = 0
+        isOvertime = false
+        overtimeSeconds = 0
+        sessionStartDate = nil
+        totalDurationSeconds = 0
+        onSessionComplete?(completedType, completedDuration)
     }
 
     func selectSessionType(_ type: SessionType) {
@@ -138,23 +208,42 @@ final class TimerService {
         timer = nil
     }
 
-    private func tick() {
+    func tick() {
         guard state == .running, let startDate = sessionStartDate else { return }
 
         let elapsed = Int(Date().timeIntervalSince(startDate))
-        remainingSeconds = max(0, totalDurationSeconds - elapsed)
-        onTick?(remainingSeconds)
+        let remaining = totalDurationSeconds - elapsed
 
-        if remainingSeconds <= 0 {
-            let completedType = currentSessionType
-            let completedDuration = totalDurationSeconds
-            LoggingService.logInfo("Session complete: \(completedType) (\(completedDuration)s)", category: .timer)
-            stopTimer()
-            state = .idle
-            remainingSeconds = 0
-            sessionStartDate = nil
-            onSessionComplete?(completedType, completedDuration)
+        if remaining > 0 {
+            remainingSeconds = remaining
+            onTick?(remainingSeconds)
+            return
         }
+
+        if currentSessionType == .pomodoro, defaults.bool(forKey: UserDefaultsKeys.overtimeEnabled) {
+            let wasOvertime = isOvertime
+            isOvertime = true
+            remainingSeconds = 0
+            overtimeSeconds = max(0, -remaining)
+            if !wasOvertime {
+                LoggingService.logInfo("Entering overtime mode", category: .timer)
+                onOvertimeStart?(currentSessionType)
+            }
+            onTick?(0)
+            return
+        }
+
+        let completedType = currentSessionType
+        let completedDuration = totalDurationSeconds
+        LoggingService.logInfo("Session complete: \(completedType) (\(completedDuration)s)", category: .timer)
+        stopTimer()
+        state = .idle
+        remainingSeconds = 0
+        isOvertime = false
+        overtimeSeconds = 0
+        sessionStartDate = nil
+        totalDurationSeconds = 0
+        onSessionComplete?(completedType, completedDuration)
     }
 
     private func setupSleepWakeObservers() {
@@ -172,12 +261,8 @@ final class TimerService {
             object: nil,
             queue: .main
         ) { [weak self] _ in
-            guard let self, self.state == .running, let startDate = self.sessionStartDate else { return }
-            let elapsed = Int(Date().timeIntervalSince(startDate))
-            self.remainingSeconds = max(0, self.totalDurationSeconds - elapsed)
-            if self.remainingSeconds <= 0 {
-                self.tick()
-            }
+            guard let self, self.state == .running else { return }
+            self.tick()
         }
     }
 
