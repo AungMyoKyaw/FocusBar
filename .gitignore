@@ -17,6 +17,8 @@ xcuserdata/
 *.ipa
 *.dSYM.zip
 *.dSYM
+*.zip
+*.app.zip
 Packages/
 .swiftpm/
 Thumbs.db
