@@ -45,6 +45,9 @@ final class TimerService {
 
     var estimatedEndDate: Date? {
         guard state == .running, !isOvertime else { return nil }
+        if let sessionStartDate {
+            return sessionStartDate.addingTimeInterval(TimeInterval(totalDurationSeconds))
+        }
         return Date().addingTimeInterval(TimeInterval(remainingSeconds))
     }
 

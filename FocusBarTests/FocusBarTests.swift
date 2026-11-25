@@ -518,5 +518,39 @@ struct V2FeatureTests {
         #expect(controller.isLocked == true)
         #expect(defaults.bool(forKey: UserDefaultsKeys.floatingWidgetLocked) == true)
     }
+
+    @Test func statusBarLayoutMetricsStayFixedAcrossTicks() {
+        // Idle always uses fixed icon length regardless of mode
+        #expect(StatusBarLayoutMetrics.length(displayMode: .timerText, isIdle: true, isOvertime: false, remainingSeconds: 0, showEndTime: true) == StatusBarLayoutMetrics.iconLength)
+        #expect(StatusBarLayoutMetrics.length(displayMode: .icon, isIdle: false, isOvertime: false, remainingSeconds: 1500, showEndTime: true) == StatusBarLayoutMetrics.iconLength)
+
+        // Progress bar stays fixed across progress updates
+        #expect(StatusBarLayoutMetrics.length(displayMode: .progressBar, isIdle: false, isOvertime: false, remainingSeconds: 1500, showEndTime: false) == StatusBarLayoutMetrics.progressBarLength)
+        #expect(StatusBarLayoutMetrics.length(displayMode: .progressBar, isIdle: false, isOvertime: false, remainingSeconds: 1, showEndTime: false) == StatusBarLayoutMetrics.progressBarLength)
+
+        // Normal countdown ticks (25:00 -> 24:59 -> 01:01 -> 00:01) keep identical fixed width
+        let lengths = [1500, 1499, 61, 1].map {
+            StatusBarLayoutMetrics.length(displayMode: .timerText, isIdle: false, isOvertime: false, remainingSeconds: $0, showEndTime: false)
+        }
+        #expect(Set(lengths) == [StatusBarLayoutMetrics.standardTimerLength])
+
+        // Overtime or 100+ minute timers use wider fixed bucket
+        #expect(StatusBarLayoutMetrics.length(displayMode: .timerText, isIdle: false, isOvertime: true, remainingSeconds: 0, showEndTime: false) == StatusBarLayoutMetrics.extendedTimerLength)
+        #expect(StatusBarLayoutMetrics.length(displayMode: .timerText, isIdle: false, isOvertime: false, remainingSeconds: 6000, showEndTime: true) == StatusBarLayoutMetrics.extendedEndTimeLength)
+    }
+
+    @Test func estimatedEndDateRemainsStableWhileRunning() {
+        let suiteName = "FocusBarTests.EndDate.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        let service = TimerService(defaults: defaults, debounceInterval: 0)
+        service.start(duration: 25)
+        let firstEndDate = service.estimatedEndDate
+        let secondEndDate = service.estimatedEndDate
+
+        #expect(firstEndDate != nil)
+        #expect(firstEndDate == secondEndDate)
+    }
 }
 

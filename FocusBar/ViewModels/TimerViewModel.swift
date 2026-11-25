@@ -96,13 +96,17 @@ final class TimerViewModel {
         }
     }
 
+    private static let endTimeFormatter: DateFormatter = {
+        let fmt = DateFormatter()
+        fmt.dateFormat = "HH:mm"
+        return fmt
+    }()
+
     var menuBarTitle: String {
         guard timerState != .idle else { return "" }
         if UserDefaults.standard.bool(forKey: UserDefaultsKeys.showEndTimeInMenuBar),
            let endDate = timerService.estimatedEndDate {
-            let fmt = DateFormatter()
-            fmt.dateFormat = "HH:mm"
-            return "\(formattedTime) · \(fmt.string(from: endDate))"
+            return "\(formattedTime) · \(Self.endTimeFormatter.string(from: endDate))"
         }
         return formattedTime
     }

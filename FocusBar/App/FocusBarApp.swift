@@ -2,43 +2,14 @@ import SwiftUI
 import SwiftData
 import AppKit
 
+@MainActor
 final class FocusBarAppDelegate: NSObject, NSApplicationDelegate {
-    private var onboardingWindow: NSWindow?
+    private var sharedModelContainer: ModelContainer!
+    private var timerViewModel: TimerViewModel!
+    private var statusBarController: StatusBarController?
+    private var managedWindows: [String: NSWindow] = [:]
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        if !UserDefaults.standard.bool(forKey: UserDefaultsKeys.hasCompletedOnboarding) {
-            showOnboardingWindow()
-        }
-    }
-
-    @MainActor
-    func showOnboardingWindow() {
-        let controller = NSHostingController(
-            rootView: OnboardingContainerView(onDismiss: { [weak self] in
-                self?.onboardingWindow?.close()
-                self?.onboardingWindow = nil
-            })
-        )
-        let window = NSWindow(contentViewController: controller)
-        window.title = "Welcome to FocusBar"
-        window.styleMask = [.titled, .closable]
-        window.setContentSize(NSSize(width: 480, height: 560))
-        window.center()
-        window.isReleasedWhenClosed = false
-        window.makeKeyAndOrderFront(nil)
-        NSApp.activate(ignoringOtherApps: true)
-        onboardingWindow = window
-    }
-}
-
-@main
-struct FocusBarApp: App {
-    @NSApplicationDelegateAdaptor(FocusBarAppDelegate.self) private var appDelegate
-    @State private var timerViewModel = TimerViewModel()
-
-    let sharedModelContainer: ModelContainer
-
-    init() {
         UserDefaults.standard.register(defaults: [
             UserDefaultsKeys.pomodoroDuration: Constants.defaultPomodoroDuration,
             UserDefaultsKeys.shortBreakDuration: Constants.defaultShortBreakDuration,
@@ -89,44 +60,88 @@ struct FocusBarApp: App {
         vm.modelContext = container.mainContext
         vm.onLaunch()
         FocusBarCommandBridge.shared.timerViewModel = vm
-        _timerViewModel = State(initialValue: vm)
+        self.timerViewModel = vm
+
+        self.statusBarController = StatusBarController(
+            timerViewModel: vm,
+            modelContainer: container,
+            onOpenWindow: { [weak self] id in
+                self?.openWindow(id: id)
+            }
+        )
+
+        if !UserDefaults.standard.bool(forKey: UserDefaultsKeys.hasCompletedOnboarding) {
+            openWindow(id: "onboarding")
+        }
     }
 
-    var body: some Scene {
-        MenuBarExtra {
-            MenuBarView(timerViewModel: timerViewModel)
-                .modelContainer(sharedModelContainer)
-                .onOpenURL { url in
-                    handleURL(url)
-                }
-        } label: {
-            TimerDisplayView(timerViewModel: timerViewModel)
+    func application(_ application: NSApplication, open urls: [URL]) {
+        for url in urls {
+            handleURL(url)
         }
-        .menuBarExtraStyle(.window)
+    }
 
-        Window("Onboarding", id: "onboarding") {
-            OnboardingContainerView()
-        }
-        .windowResizability(.contentSize)
+    func openWindow(id: String) {
+        statusBarController?.closePopover()
 
-        Window("Settings", id: "settings") {
-            SettingsView(timerViewModel: timerViewModel)
-                .modelContainer(sharedModelContainer)
+        if let existing = managedWindows[id] {
+            existing.makeKeyAndOrderFront(nil)
+            NSApp.activate(ignoringOtherApps: true)
+            return
         }
-        .defaultSize(width: 560, height: 480)
-        .windowResizability(.contentSize)
 
-        Window("Statistics", id: "stats") {
-            StatsView()
-                .modelContainer(sharedModelContainer)
-        }
-        .defaultSize(width: 760, height: 640)
+        let window: NSWindow
+        switch id {
+        case "onboarding":
+            let controller = NSHostingController(
+                rootView: OnboardingContainerView(onDismiss: { [weak self] in
+                    self?.managedWindows["onboarding"]?.close()
+                })
+            )
+            window = NSWindow(contentViewController: controller)
+            window.title = "Welcome to FocusBar"
+            window.styleMask = [.titled, .closable]
+            window.setContentSize(NSSize(width: 480, height: 560))
 
-        Window("Achievements", id: "achievements") {
-            AchievementsView()
-                .modelContainer(sharedModelContainer)
+        case "settings":
+            let controller = NSHostingController(
+                rootView: SettingsView(timerViewModel: timerViewModel)
+                    .modelContainer(sharedModelContainer)
+            )
+            window = NSWindow(contentViewController: controller)
+            window.title = "Settings"
+            window.styleMask = [.titled, .closable, .miniaturizable]
+            window.setContentSize(NSSize(width: 560, height: 480))
+
+        case "stats":
+            let controller = NSHostingController(
+                rootView: StatsView()
+                    .modelContainer(sharedModelContainer)
+            )
+            window = NSWindow(contentViewController: controller)
+            window.title = "Statistics"
+            window.styleMask = [.titled, .closable, .miniaturizable, .resizable]
+            window.setContentSize(NSSize(width: 760, height: 640))
+
+        case "achievements":
+            let controller = NSHostingController(
+                rootView: AchievementsView()
+                    .modelContainer(sharedModelContainer)
+            )
+            window = NSWindow(contentViewController: controller)
+            window.title = "Achievements"
+            window.styleMask = [.titled, .closable, .miniaturizable, .resizable]
+            window.setContentSize(NSSize(width: 660, height: 580))
+
+        default:
+            return
         }
-        .defaultSize(width: 660, height: 580)
+
+        window.center()
+        window.isReleasedWhenClosed = false
+        managedWindows[id] = window
+        window.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
     }
 
     private func handleURL(_ url: URL) {
@@ -157,6 +172,17 @@ struct FocusBarApp: App {
             timerViewModel.reset()
         default:
             break
+        }
+    }
+}
+
+@main
+struct FocusBarApp: App {
+    @NSApplicationDelegateAdaptor(FocusBarAppDelegate.self) private var appDelegate
+
+    var body: some Scene {
+        Settings {
+            EmptyView()
         }
     }
 }

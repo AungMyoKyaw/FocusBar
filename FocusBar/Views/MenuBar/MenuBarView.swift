@@ -10,6 +10,7 @@ struct MenuBarView: View {
     @AppStorage(UserDefaultsKeys.shortBreakDuration) private var shortBreakDuration = Constants.defaultShortBreakDuration
     @AppStorage(UserDefaultsKeys.longBreakDuration) private var longBreakDuration = Constants.defaultLongBreakDuration
     @State var timerViewModel: TimerViewModel
+    var onOpenWindow: ((String) -> Void)? = nil
 
     private var activeAccent: Color {
         FocusBarTheme.accent(for: timerViewModel.currentSessionType)
@@ -471,23 +472,29 @@ struct MenuBarView: View {
 
     // MARK: - Bottom Action Dock
 
+    private func openAppWindow(_ id: String) {
+        if let onOpenWindow {
+            onOpenWindow(id)
+        } else {
+            openWindow(id: id)
+            NSApp.activate(ignoringOtherApps: true)
+        }
+    }
+
     private var navigationDock: some View {
         HStack(spacing: 4) {
             MenuBarDockButton(title: "Stats", systemImage: "chart.bar", hint: "Opens the statistics window") {
-                openWindow(id: "stats")
-                NSApp.activate(ignoringOtherApps: true)
+                openAppWindow("stats")
             }
             .keyboardShortcut("1", modifiers: .command)
 
             MenuBarDockButton(title: "Badges", systemImage: "trophy", hint: "Opens the achievements window") {
-                openWindow(id: "achievements")
-                NSApp.activate(ignoringOtherApps: true)
+                openAppWindow("achievements")
             }
             .keyboardShortcut("2", modifiers: .command)
 
             MenuBarDockButton(title: "Settings", systemImage: "gearshape", hint: "Opens the settings window") {
-                openWindow(id: "settings")
-                NSApp.activate(ignoringOtherApps: true)
+                openAppWindow("settings")
             }
             .keyboardShortcut(",", modifiers: .command)
 

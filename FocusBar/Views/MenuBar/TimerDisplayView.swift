@@ -12,7 +12,7 @@ struct TimerDisplayView: View {
                 .accessibilityLabel(timerAccessibilityLabel)
         case MenuBarDisplayMode.icon.rawValue:
             Image(systemName: timerViewModel.menuBarSystemImage)
-                .accessibilityLabel(timerAccessibilityLabel)
+                .accessibilityLabel(iconOnlyAccessibilityLabel)
         default:
             HStack(spacing: 4) {
                 Image(systemName: timerViewModel.menuBarSystemImage)
@@ -23,6 +23,17 @@ struct TimerDisplayView: View {
             }
             .accessibilityElement(children: .combine)
             .accessibilityLabel(timerAccessibilityLabel)
+        }
+    }
+
+    private var iconOnlyAccessibilityLabel: String {
+        switch timerViewModel.timerState {
+        case .idle:
+            return "FocusBar: idle"
+        case .running:
+            return "FocusBar: \(timerViewModel.currentSessionType.displayName) running"
+        case .paused:
+            return "FocusBar: \(timerViewModel.currentSessionType.displayName) paused"
         }
     }
 
