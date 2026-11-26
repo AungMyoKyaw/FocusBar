@@ -17,12 +17,13 @@ build:
 	xcodebuild -project $(PROJECT) -scheme $(SCHEME) -configuration Debug -derivedDataPath $(DERIVED_DATA) build
 
 release:
-	xcodebuild -project $(PROJECT) -scheme $(SCHEME) -configuration Release -derivedDataPath $(DERIVED_DATA_RELEASE) build
+	xcodebuild -project $(PROJECT) -scheme $(SCHEME) -configuration Release -derivedDataPath $(DERIVED_DATA_RELEASE) ARCHS="arm64 x86_64" ONLY_ACTIVE_ARCH=NO build
 	@echo "Verifying code signature and hardened runtime:"
 	codesign -dvvv $(RELEASE_APP_PATH)
 	@echo "Creating signed distribution zip..."
 	ditto -c -k --sequesterRsrc --keepParent $(RELEASE_APP_PATH) .build/FocusBar.app.zip
-	@echo "Built release app at $(RELEASE_APP_PATH) and .build/FocusBar.app.zip"
+	cp .build/FocusBar.app.zip FocusBar.app.zip
+	@echo "Built universal release app at $(RELEASE_APP_PATH), .build/FocusBar.app.zip, and FocusBar.app.zip"
 
 archive:
 	rm -rf $(ARCHIVE_PATH)
