@@ -34,7 +34,10 @@ jobs:
             -scheme FocusBar \
             -destination 'platform=macOS' \
             -only-testing:FocusBarTests \
-            -derivedDataPath DerivedData
+            -derivedDataPath DerivedData \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO
 
       - name: Cleanup
         if: always()
