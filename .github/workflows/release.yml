@@ -37,25 +37,58 @@ jobs:
             -only-testing:FocusBarTests \
             -derivedDataPath DerivedData
 
-      - name: Build Universal Release
+      - name: Configure Signing & Build Universal Release
+        env:
+          APPLE_CERTIFICATE_BASE64: ${{ secrets.APPLE_CERTIFICATE_BASE64 }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD || 'temporary-ci-password' }}
         run: |
-          xcodebuild -project FocusBar.xcodeproj \
-            -scheme FocusBar \
-            -configuration Release \
-            -derivedDataPath DerivedData \
-            ARCHS="arm64 x86_64" \
-            ONLY_ACTIVE_ARCH=NO \
-            CODE_SIGN_IDENTITY=- \
-            CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGNING_ALLOWED=NO \
-            build
+          if [ -n "$APPLE_CERTIFICATE_BASE64" ]; then
+            echo "Importing Apple Developer Certificate into temporary keychain..."
+            KEYCHAIN_PATH=$RUNNER_TEMP/build.keychain
+            security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+            security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+            security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
 
-      - name: CodeSign App
+            CERT_PATH=$RUNNER_TEMP/certificate.p12
+            echo "$APPLE_CERTIFICATE_BASE64" | base64 --decode > "$CERT_PATH"
+            security import "$CERT_PATH" -k "$KEYCHAIN_PATH" -P "${APPLE_CERTIFICATE_PASSWORD:-}" -T /usr/bin/codesign
+            security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+            security list-keychains -d user -s "$KEYCHAIN_PATH" $(security list-keychains -d user | tr -d '"')
+
+            echo "Building with Apple Developer certificate..."
+            xcodebuild -project FocusBar.xcodeproj \
+              -scheme FocusBar \
+              -configuration Release \
+              -derivedDataPath DerivedData \
+              ARCHS="arm64 x86_64" \
+              ONLY_ACTIVE_ARCH=NO \
+              DEVELOPMENT_TEAM=ZSQUH7GKC5 \
+              CODE_SIGNING_REQUIRED=YES \
+              CODE_SIGNING_ALLOWED=YES \
+              build
+          else
+            echo "::warning::APPLE_CERTIFICATE_BASE64 secret not found. Building universal binary with ad-hoc signing for GitHub asset release."
+            xcodebuild -project FocusBar.xcodeproj \
+              -scheme FocusBar \
+              -configuration Release \
+              -derivedDataPath DerivedData \
+              ARCHS="arm64 x86_64" \
+              ONLY_ACTIVE_ARCH=NO \
+              CODE_SIGN_IDENTITY=- \
+              CODE_SIGNING_REQUIRED=NO \
+              CODE_SIGNING_ALLOWED=NO \
+              build
+
+            codesign --force --deep --sign - "DerivedData/Build/Products/Release/FocusBar.app"
+          fi
+
+      - name: Verify Code Signature
         run: |
           APP_PATH="DerivedData/Build/Products/Release/FocusBar.app"
           if [ -d "$APP_PATH" ]; then
-            codesign --force --deep --sign - "$APP_PATH"
             codesign --verify --deep --strict "$APP_PATH"
+            codesign -dvvv "$APP_PATH"
             lipo -info "$APP_PATH/Contents/MacOS/FocusBar"
           else
             echo "App not found at: $APP_PATH"

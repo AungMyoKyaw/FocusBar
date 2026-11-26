@@ -13,13 +13,28 @@ Native macOS menu bar Pomodoro timer with SwiftData persistence, XP/streak track
 
 ```bash
 # Debug build
-xcodebuild -project FocusBar.xcodeproj -scheme FocusBar -configuration Debug build
+make build
+# or: xcodebuild -project FocusBar.xcodeproj -scheme FocusBar -configuration Debug build
+
+# Release build (signed with Apple Developer certificate and hardened runtime)
+make release
+
+# Verify code signature and entitlements
+make verify-signature
+
+# Archive for App Store
+make archive
+
+# Export for App Store Connect upload
+make export-appstore
 
 # Unit tests (Swift Testing)
-xcodebuild test -project FocusBar.xcodeproj -scheme FocusBar -destination 'platform=macOS' -only-testing:FocusBarTests
+make test
+# or: xcodebuild test -project FocusBar.xcodeproj -scheme FocusBar -destination 'platform=macOS' -only-testing:FocusBarTests
 
 # UI tests (XCTest)
-xcodebuild test -project FocusBar.xcodeproj -scheme FocusBar -destination 'platform=macOS' -only-testing:FocusBarUITests
+make ui-test
+# or: xcodebuild test -project FocusBar.xcodeproj -scheme FocusBar -destination 'platform=macOS' -only-testing:FocusBarUITests
 ```
 
 ## Project Structure
