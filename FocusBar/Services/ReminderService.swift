@@ -1,9 +1,11 @@
 import Foundation
 import EventKit
 
+@Observable
 final class ReminderService {
-    private let eventStore = EKEventStore()
+    @ObservationIgnored private let eventStore = EKEventStore()
     var isAuthorized: Bool = false
+    var isDenied: Bool = false
 
     init() {
         checkAuthorization()
@@ -11,6 +13,7 @@ final class ReminderService {
 
     func checkAuthorization() {
         let status = EKEventStore.authorizationStatus(for: .reminder)
+        isDenied = status == .denied || status == .restricted
         if #available(macOS 14, *) {
             isAuthorized = status == .fullAccess
         } else {
@@ -27,10 +30,14 @@ final class ReminderService {
             } else {
                 granted = try await eventStore.requestAccess(to: .reminder)
             }
-            await MainActor.run { isAuthorized = granted }
+            await MainActor.run {
+                isAuthorized = granted
+                isDenied = !granted
+            }
             LoggingService.logInfo("Reminder permission \(granted ? "granted" : "denied")", category: .permissions)
             return granted
         } catch {
+            await MainActor.run { isDenied = true }
             LoggingService.logError(.permissionDenied(.reminders), context: "requestAccess failed: \(error.localizedDescription)")
             return false
         }

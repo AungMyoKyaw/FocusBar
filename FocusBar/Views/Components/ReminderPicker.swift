@@ -37,9 +37,13 @@ struct ReminderPicker: View {
             Spacer()
 
             Button {
-                Task { await viewModel.requestAccess() }
+                if viewModel.isDenied {
+                    viewModel.openPrivacySettings()
+                } else {
+                    Task { await viewModel.requestAccess() }
+                }
             } label: {
-                Text("Connect")
+                Text(viewModel.isDenied ? "Open Settings" : "Connect")
                     .font(.caption2.weight(.semibold))
                     .foregroundStyle(.primary)
                     .padding(.horizontal, 10)
@@ -48,7 +52,7 @@ struct ReminderPicker: View {
             }
             .buttonStyle(.plain)
             .accessibilityLabel("Connect Apple Reminders")
-            .accessibilityHint("Requests permission to access your Apple Reminders")
+            .accessibilityHint(viewModel.isDenied ? "Opens System Settings to allow Reminders access" : "Requests permission to access your Apple Reminders")
         }
     }
 

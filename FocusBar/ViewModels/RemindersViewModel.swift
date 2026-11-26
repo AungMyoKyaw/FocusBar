@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 
 @Observable
@@ -10,6 +11,13 @@ final class RemindersViewModel {
     var currentError: AppError?
 
     var isAuthorized: Bool { reminderService.isAuthorized }
+    var isDenied: Bool { reminderService.isDenied }
+
+    func openPrivacySettings() {
+        if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Reminders") {
+            NSWorkspace.shared.open(url)
+        }
+    }
 
     func loadReminders() async {
         if searchQuery.isEmpty {
@@ -20,7 +28,13 @@ final class RemindersViewModel {
     }
 
     func requestAccess() async {
-        _ = await reminderService.requestAccess()
+        let granted = await reminderService.requestAccess()
+        if granted {
+            currentError = nil
+            await loadReminders()
+        } else {
+            currentError = .permissionDenied(.reminders)
+        }
     }
 
     func createQuickTask() async {
