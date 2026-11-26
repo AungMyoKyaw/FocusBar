@@ -13,7 +13,7 @@
 
 <p align="center">
   <a href="https://aungmyokyaw.github.io/FocusBar/"><strong>Website</strong></a> ·
-  <a href="https://github.com/AungMyoKyaw/FocusBar/releases/latest"><strong>Download v2.0.0</strong></a> ·
+  <a href="https://github.com/AungMyoKyaw/FocusBar/releases/latest"><strong>Download v2.0.3</strong></a> ·
   <a href="#installation"><strong>Homebrew</strong></a>
 </p>
 
@@ -21,6 +21,7 @@
   <a href="https://github.com/AungMyoKyaw/FocusBar/actions/workflows/build.yml"><img src="https://github.com/AungMyoKyaw/FocusBar/actions/workflows/build.yml/badge.svg" alt="Build Status" /></a>
   <a href="https://github.com/AungMyoKyaw/FocusBar/actions/workflows/release.yml"><img src="https://github.com/AungMyoKyaw/FocusBar/actions/workflows/release.yml/badge.svg" alt="Release Status" /></a>
   <img src="https://img.shields.io/badge/platform-macOS%2014.0%2B-blue" alt="macOS 14.0+" />
+  <img src="https://img.shields.io/badge/code%20signing-Apple%20Developer%20(Hardened%20Runtime)-success" alt="Apple Developer Signed" />
   <img src="https://img.shields.io/badge/license-MIT-green" alt="MIT License" />
 </p>
 
@@ -68,6 +69,17 @@ Track your focus journey with 30-level progression (from *Seedling* to *Focus Ma
 
 ---
 
+## Security & Code Signing
+
+FocusBar is built with strict privacy and security guarantees:
+
+- **Apple Developer Certificate**: Codesigned using an official Apple Developer ID certificate (`TeamIdentifier: ZSQUH7GKC5`).
+- **Hardened Runtime**: Enabled with Apple runtime security mitigations (`flags=0x10000(runtime)`).
+- **App Sandbox**: Fully sandboxed (`com.apple.security.app-sandbox = true`) with explicit user permissions for Apple Calendar and Reminders via EventKit.
+- **Zero Telemetry**: No analytics, no trackers, no remote network calls. All Pomodoro history, achievements, and stats remain strictly on your device in SwiftData.
+
+---
+
 ## Installation
 
 ### Homebrew Cask
@@ -111,6 +123,18 @@ brew install --cask aungmyokyaw/tap/focusbar
 # Build debug binary
 make build
 
+# Build universal release binary (arm64 + x86_64) signed with Apple Developer certificate
+make release
+
+# Verify code signature, team ID, and entitlements
+make verify-signature
+
+# Create release xcarchive
+make archive
+
+# Export for App Store Connect distribution
+make export-appstore
+
 # Run unit tests
 make test
 
@@ -131,11 +155,11 @@ make clean
 
 ## Release Process
 
-Push a semver version tag (`v2.0.0`) to trigger the GitHub Actions release workflow:
+Push a semver version tag (`v2.0.3`) to trigger the GitHub Actions release workflow:
 1. Runs full test suite (`FocusBarTests`).
 2. Builds universal binary (`arm64` + `x86_64`).
-3. Ad-hoc codesigns and zips `FocusBar.app`.
-4. Publishes GitHub Release with automated changelog.
+3. Signs binary with Apple Developer certificate and Hardened Runtime.
+4. Publishes GitHub Release with automated changelog and attaches `FocusBar.app.zip`.
 
 ---
 
