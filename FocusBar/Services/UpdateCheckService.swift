@@ -1,3 +1,4 @@
+#if !MAC_APP_STORE
 import Foundation
 
 enum UpdateCheckResult: Equatable {
@@ -61,3 +62,4 @@ final class UpdateCheckService {
         }
     }
 }
+#endif

@@ -413,13 +413,14 @@
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
 				INFOPLIST_KEY_LSUIElement = YES;
 				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "FocusBar reads your calendar to show upcoming events and block focus time.";
 				INFOPLIST_KEY_NSCalendarsUsageDescription = "FocusBar reads your calendar to show upcoming events and block focus time.";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2026 Aung Myo Kyaw. All rights reserved.";
 				INFOPLIST_KEY_NSRemindersFullAccessUsageDescription = "FocusBar links focus sessions to your Apple Reminders so you can pick a task, log focus time, and mark it complete.";
 				INFOPLIST_KEY_NSRemindersUsageDescription = "FocusBar links focus sessions to your Apple Reminders so you can pick a task, log focus time, and mark it complete.";
-				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
@@ -453,13 +454,14 @@
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
 				INFOPLIST_KEY_LSUIElement = YES;
 				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "FocusBar reads your calendar to show upcoming events and block focus time.";
 				INFOPLIST_KEY_NSCalendarsUsageDescription = "FocusBar reads your calendar to show upcoming events and block focus time.";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2026 Aung Myo Kyaw. All rights reserved.";
 				INFOPLIST_KEY_NSRemindersFullAccessUsageDescription = "FocusBar links focus sessions to your Apple Reminders so you can pick a task, log focus time, and mark it complete.";
 				INFOPLIST_KEY_NSRemindersUsageDescription = "FocusBar links focus sessions to your Apple Reminders so you can pick a task, log focus time, and mark it complete.";
-				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",

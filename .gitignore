@@ -1,6 +1,31 @@
 .DS_Store
 .build/
 DerivedData/
+
+# Secrets & certificates
+.env
+.env.*
+!.env.example
+!.env.template
+!.env.sample
+*.pem
+*.key
+*.p12
+*.pfx
+*.keystore
+*.jks
+*.mobileprovision
+*.cer
+credentials*.json
+service-account*.json
+
+# AI / editor scratch
+.cursor/
+.claude/
+.gemini/
+.windsurf/
+scratch/
+MEMORY.md
 *.swiftpm/
 *.xcuserstate
 xcuserdata/

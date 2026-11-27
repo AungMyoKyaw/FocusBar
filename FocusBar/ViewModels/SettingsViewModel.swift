@@ -39,10 +39,12 @@ final class SettingsViewModel {
     var launchAtLogin: Bool = SMAppService.mainApp.status == .enabled
     var launchAtLoginError: String?
 
+#if !MAC_APP_STORE
     var isCheckingUpdates = false
     var updateStatus: UpdateCheckResult?
 
     private let updateService = UpdateCheckService()
+#endif
 
     func applyPreset(_ preset: TimerPreset) {
         pomodoroDuration = preset.focusMinutes
@@ -84,6 +86,7 @@ final class SettingsViewModel {
         }
     }
 
+#if !MAC_APP_STORE
     func checkForUpdates() async {
         isCheckingUpdates = true
         let result = await updateService.checkForUpdates()
@@ -92,4 +95,5 @@ final class SettingsViewModel {
             isCheckingUpdates = false
         }
     }
+#endif
 }

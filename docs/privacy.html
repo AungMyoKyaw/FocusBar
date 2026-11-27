@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Privacy Policy &amp; Support — FocusBar</title>
+  <meta name="description" content="Privacy Policy and Support information for FocusBar, a native macOS Pomodoro timer." />
+  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+  <style>
+    :root {
+      --bg: #0e0e10;
+      --surface: rgba(255, 255, 255, 0.035);
+      --border: rgba(255, 255, 255, 0.08);
+      --text: #f5f5f7;
+      --text-secondary: #a1a1aa;
+      --text-muted: #71717a;
+      --accent-focus: #ff5b45;
+      --radius-card: 12px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html {
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Inter", system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+    body {
+      max-width: 760px;
+      margin: 0 auto;
+      padding: 56px 24px 80px;
+      line-height: 1.65;
+    }
+    header {
+      margin-bottom: 40px;
+      padding-bottom: 24px;
+      border-bottom: 1px solid var(--border);
+    }
+    .back-link {
+      display: inline-block;
+      color: var(--accent-focus);
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 500;
+      margin-bottom: 16px;
+    }
+    .back-link:hover { text-decoration: underline; }
+    h1 { font-size: 32px; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 8px; }
+    .meta { color: var(--text-muted); font-size: 14px; }
+    section {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-card);
+      padding: 24px;
+      margin-bottom: 20px;
+    }
+    h2 { font-size: 18px; font-weight: 600; margin-bottom: 10px; }
+    p, li { color: var(--text-secondary); font-size: 15px; }
+    ul { padding-left: 20px; margin-top: 8px; }
+    li + li { margin-top: 6px; }
+    a { color: var(--accent-focus); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <header>
+    <a class="back-link" href="./">&larr; Back to FocusBar</a>
+    <h1>Privacy Policy</h1>
+    <p class="meta">Effective Date: November 27, 2026 &middot; FocusBar for macOS</p>
+  </header>
+
+  <section>
+    <h2>Overview</h2>
+    <p>FocusBar is a local-first macOS menu bar Pomodoro timer. We do not collect, store, sell, or transmit your personal data, focus history, or usage analytics to any external server.</p>
+  </section>
+
+  <section>
+    <h2>Data Stored on Your Mac</h2>
+    <ul>
+      <li><strong>Focus Sessions &amp; Statistics:</strong> Your completed sessions, streaks, XP, and achievements are stored locally on your Mac using Apple's SwiftData framework and <code>UserDefaults</code>.</li>
+      <li><strong>Preferences:</strong> Timer durations, soundscape settings, and UI options remain strictly on your device.</li>
+      <li><strong>Exports:</strong> If you export your data to JSON or CSV, the file is saved only to the location you explicitly choose.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Optional System Permissions</h2>
+    <ul>
+      <li><strong>Apple Reminders (EventKit):</strong> Only accessed if you choose to connect Apple Reminders to link focus sessions to tasks or mark reminders complete. Reminder data never leaves your Mac.</li>
+      <li><strong>Apple Calendar (EventKit):</strong> Only accessed if you enable Calendar Sync to log completed focus blocks or view upcoming events. Calendar data never leaves your Mac.</li>
+      <li><strong>Notifications:</strong> Used solely to alert you locally when a focus or break interval finishes.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Third-Party Services &amp; Tracking</h2>
+    <p>FocusBar contains no third-party analytics SDKs, no advertising frameworks, and no user tracking.</p>
+  </section>
+
+  <section>
+    <h2>Support &amp; Contact</h2>
+    <p>For bug reports, feature requests, or privacy questions, please open an issue on <a href="https://github.com/AungMyoKyaw/FocusBar/issues" target="_blank" rel="noopener">GitHub Issues</a> or visit the <a href="https://aungmyokyaw.github.io/FocusBar/">FocusBar homepage</a>.</p>
+  </section>
+</body>
+</html>

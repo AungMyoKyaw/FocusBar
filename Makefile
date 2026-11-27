@@ -27,7 +27,7 @@ release:
 
 archive:
 	rm -rf $(ARCHIVE_PATH)
-	xcodebuild -project $(PROJECT) -scheme $(SCHEME) -configuration Release -archivePath $(ARCHIVE_PATH) archive
+	xcodebuild -project $(PROJECT) -scheme $(SCHEME) -configuration Release -archivePath $(ARCHIVE_PATH) CODE_SIGN_ENTITLEMENTS=FocusBar/FocusBar-AppStore.entitlements OTHER_SWIFT_FLAGS='$$(inherited) -DMAC_APP_STORE' archive
 
 export-appstore: archive
 	rm -rf $(EXPORT_PATH)

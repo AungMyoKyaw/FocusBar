@@ -358,6 +358,7 @@ struct SettingsView: View {
                 .padding(.vertical, 4)
             }
 
+#if !MAC_APP_STORE
             Section("Updates") {
                 HStack {
                     Button(viewModel.isCheckingUpdates ? "Checking..." : "Check for Updates") {
@@ -385,6 +386,7 @@ struct SettingsView: View {
                     }
                 }
             }
+#endif
 
             Section("Links") {
                 if let websiteURL = URL(string: Constants.websiteURL) {
