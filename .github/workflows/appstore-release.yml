@@ -106,13 +106,13 @@ jobs:
       - name: Configure App Store Connect API Key & Optional Certificates
         id: signing
         env:
-          ASC_KEY_BASE64: ${{ secrets.APP_STORE_CONNECT_API_KEY_BASE64 }}
-          ASC_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
-          ASC_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_API_ISSUER_ID }}
-          APPLE_DISTRIBUTION_CERT_BASE64: ${{ secrets.APPLE_DISTRIBUTION_CERTIFICATE_BASE64 }}
-          APPLE_DISTRIBUTION_CERT_PASSWORD: ${{ secrets.APPLE_DISTRIBUTION_CERTIFICATE_PASSWORD }}
-          MAC_INSTALLER_CERT_BASE64: ${{ secrets.MAC_INSTALLER_CERTIFICATE_BASE64 }}
-          MAC_INSTALLER_CERT_PASSWORD: ${{ secrets.MAC_INSTALLER_CERTIFICATE_PASSWORD }}
+          ASC_KEY_BASE64: ${{ secrets.ASC_KEY_P8_BASE64 || secrets.APP_STORE_CONNECT_API_KEY_BASE64 }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID || secrets.APP_STORE_CONNECT_API_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID || secrets.APP_STORE_CONNECT_API_ISSUER_ID }}
+          APPLE_DISTRIBUTION_CERT_BASE64: ${{ secrets.APPLE_DIST_CERT_P12_BASE64 || secrets.APPLE_DISTRIBUTION_CERTIFICATE_BASE64 }}
+          APPLE_DISTRIBUTION_CERT_PASSWORD: ${{ secrets.APPLE_DIST_CERT_PASSWORD || secrets.APPLE_DISTRIBUTION_CERTIFICATE_PASSWORD }}
+          MAC_INSTALLER_CERT_BASE64: ${{ secrets.MAC_INSTALLER_CERT_P12_BASE64 || secrets.MAC_INSTALLER_CERTIFICATE_BASE64 }}
+          MAC_INSTALLER_CERT_PASSWORD: ${{ secrets.MAC_INSTALLER_CERT_PASSWORD || secrets.MAC_INSTALLER_CERTIFICATE_PASSWORD }}
           KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD || 'temporary-ci-keychain-password' }}
         run: |
           if [ -z "$ASC_KEY_BASE64" ] || [ -z "$ASC_KEY_ID" ] || [ -z "$ASC_ISSUER_ID" ]; then
@@ -154,8 +154,8 @@ jobs:
       - name: Export Signed Mac App Store Package (.pkg)
         id: export
         env:
-          ASC_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
-          ASC_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_API_ISSUER_ID }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID || secrets.APP_STORE_CONNECT_API_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID || secrets.APP_STORE_CONNECT_API_ISSUER_ID }}
         run: |
           rm -rf .build/export
           xcodebuild -exportArchive \
@@ -188,8 +188,8 @@ jobs:
       - name: Validate & Upload Package to App Store Connect
         if: ${{ github.event_name == 'push' || inputs.upload_to_app_store_connect }}
         env:
-          ASC_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
-          ASC_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_API_ISSUER_ID }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID || secrets.APP_STORE_CONNECT_API_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID || secrets.APP_STORE_CONNECT_API_ISSUER_ID }}
         run: |
           PKG_PATH="${{ steps.export.outputs.pkg_path }}"
           echo "Validating $PKG_PATH with App Store Connect..."
