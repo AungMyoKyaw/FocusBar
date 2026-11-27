@@ -99,9 +99,13 @@ jobs:
             OTHER_SWIFT_FLAGS='$(inherited) -DMAC_APP_STORE' \
             MARKETING_VERSION="${{ steps.version.outputs.version }}" \
             CURRENT_PROJECT_VERSION="${{ steps.version.outputs.build_number }}" \
-            CODE_SIGN_IDENTITY="" \
+            CODE_SIGN_STYLE=Manual \
+            CODE_SIGN_IDENTITY="-" \
             CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGNING_ALLOWED=NO
+            CODE_SIGNING_ALLOWED=YES
+          echo "Verifying embedded App Store entitlements in archive:"
+          codesign -d --entitlements :- .build/FocusBar.xcarchive/Products/Applications/FocusBar.app
+          codesign -d --entitlements :- .build/FocusBar.xcarchive/Products/Applications/FocusBar.app | grep -q 'com.apple.security.app-sandbox'
 
       - name: Configure App Store Connect API Key & Optional Certificates
         id: signing
