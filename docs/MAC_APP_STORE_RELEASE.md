@@ -76,3 +76,29 @@ make export-appstore
 ```
 
 If `make export-appstore` reports a missing **Apple Distribution** or **Mac Installer Distribution** certificate, open **Xcode → Settings → Accounts → Manage Certificates → `+`** and create both **Apple Distribution** and **Mac Installer Distribution** for team `ZSQUH7GKC5`, then re-run `make export-appstore` and upload via **Xcode Organizer** or **Transporter**.
+
+---
+
+## 4. GitHub Actions CI/CD Pipeline (`appstore-release.yml`)
+
+All macOS workflows (`build.yml`, `release.yml`, `appstore-release.yml`) run on GitHub's latest GA Apple Silicon runner: **`xcode-27`** (macOS 27 + Xcode 27).
+
+`appstore-release.yml` runs unit tests, builds a universal (`arm64 x86_64`) Mac App Store archive (`-DMAC_APP_STORE`, `FocusBar-AppStore.entitlements`), exports a signed `.pkg` via Xcode Cloud Managed Signing (or optional `.p12` certificates), uploads the `.pkg` as a GitHub Actions workflow artifact, and validates + uploads it to App Store Connect via `xcrun altool`.
+
+### Required GitHub Repository Secrets
+
+| Secret | Description |
+| :--- | :--- |
+| `APP_STORE_CONNECT_API_KEY_BASE64` | Base64-encoded App Store Connect API `.p8` key (`base64 -i ~/.appstoreconnect/private_keys/AuthKey_<KEY_ID>.p8 \| tr -d '\n'`) |
+| `APP_STORE_CONNECT_API_KEY_ID` | 10-character Key ID (e.g., `LSYC92GX5B`) |
+| `APP_STORE_CONNECT_API_ISSUER_ID` | Issuer UUID from App Store Connect → Users and Access → Integrations → App Store Connect API |
+
+Optional (only if you prefer local certificate signing over Xcode Cloud Managed Signing):
+- `APPLE_DISTRIBUTION_CERTIFICATE_BASE64` / `APPLE_DISTRIBUTION_CERTIFICATE_PASSWORD`
+- `MAC_INSTALLER_CERTIFICATE_BASE64` / `MAC_INSTALLER_CERTIFICATE_PASSWORD`
+
+### Triggering a Release
+
+- **Automatic**: Push a version tag (`git tag v2.0.4 && git push origin v2.0.4`).
+- **Manual**: Run **Actions → Mac App Store Release → Run workflow** (supports optional `marketing_version`, `build_number`, and `upload_to_app_store_connect` inputs).
+

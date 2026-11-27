@@ -1,0 +1,217 @@
+name: Mac App Store Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      marketing_version:
+        description: 'Optional marketing version override (e.g. 2.0.3). Leave blank to use Xcode project version.'
+        required: false
+        default: ''
+      build_number:
+        description: 'Optional build number override (integer). Leave blank to auto-increment from GitHub run number.'
+        required: false
+        default: ''
+      upload_to_app_store_connect:
+        description: 'Validate and upload the signed .pkg to App Store Connect'
+        type: boolean
+        required: false
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  appstore-release:
+    name: Build, Sign & Upload Mac App Store Package
+    runs-on: xcode-27
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Select Xcode & Snapshot Environment
+        run: |
+          sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
+          sw_vers
+          uname -m
+          xcodebuild -version
+
+      - name: Run Unit Tests
+        run: |
+          xcodebuild test \
+            -project FocusBar.xcodeproj \
+            -scheme FocusBar \
+            -destination 'platform=macOS' \
+            -only-testing:FocusBarTests \
+            -derivedDataPath .build/DerivedData-Tests \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO
+
+      - name: Resolve Version & Build Number
+        id: version
+        env:
+          INPUT_VERSION: ${{ github.event.inputs.marketing_version }}
+          INPUT_BUILD: ${{ github.event.inputs.build_number }}
+        run: |
+          PROJ_VERSION=$(grep -m1 'MARKETING_VERSION =' FocusBar.xcodeproj/project.pbxproj | sed -E 's/.*= ([^;]+);/\1/' | tr -d '[:space:]')
+          PROJ_BUILD=$(grep -m1 'CURRENT_PROJECT_VERSION =' FocusBar.xcodeproj/project.pbxproj | sed -E 's/.*= ([^;]+);/\1/' | tr -d '[:space:]')
+
+          if [ -n "$INPUT_VERSION" ]; then
+            VERSION="$INPUT_VERSION"
+          elif [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
+            VERSION="${GITHUB_REF#refs/tags/v}"
+          else
+            VERSION="$PROJ_VERSION"
+          fi
+
+          if [ -n "$INPUT_BUILD" ]; then
+            BUILD_NUMBER="$INPUT_BUILD"
+          else
+            BUILD_NUMBER=$(( PROJ_BUILD + GITHUB_RUN_NUMBER ))
+          fi
+
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "build_number=$BUILD_NUMBER" >> "$GITHUB_OUTPUT"
+          echo "Resolved Mac App Store release: v${VERSION} (build ${BUILD_NUMBER})"
+
+      - name: Archive Universal Mac App Store Build
+        run: |
+          rm -rf .build/FocusBar.xcarchive
+          xcodebuild archive \
+            -project FocusBar.xcodeproj \
+            -scheme FocusBar \
+            -configuration Release \
+            -destination 'generic/platform=macOS' \
+            -archivePath .build/FocusBar.xcarchive \
+            ARCHS="arm64 x86_64" \
+            ONLY_ACTIVE_ARCH=NO \
+            CODE_SIGN_ENTITLEMENTS=FocusBar/FocusBar-AppStore.entitlements \
+            OTHER_SWIFT_FLAGS='$(inherited) -DMAC_APP_STORE' \
+            MARKETING_VERSION="${{ steps.version.outputs.version }}" \
+            CURRENT_PROJECT_VERSION="${{ steps.version.outputs.build_number }}" \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO
+
+      - name: Configure App Store Connect API Key & Optional Certificates
+        id: signing
+        env:
+          ASC_KEY_BASE64: ${{ secrets.APP_STORE_CONNECT_API_KEY_BASE64 }}
+          ASC_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_API_ISSUER_ID }}
+          APPLE_DISTRIBUTION_CERT_BASE64: ${{ secrets.APPLE_DISTRIBUTION_CERTIFICATE_BASE64 }}
+          APPLE_DISTRIBUTION_CERT_PASSWORD: ${{ secrets.APPLE_DISTRIBUTION_CERTIFICATE_PASSWORD }}
+          MAC_INSTALLER_CERT_BASE64: ${{ secrets.MAC_INSTALLER_CERTIFICATE_BASE64 }}
+          MAC_INSTALLER_CERT_PASSWORD: ${{ secrets.MAC_INSTALLER_CERTIFICATE_PASSWORD }}
+          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD || 'temporary-ci-keychain-password' }}
+        run: |
+          if [ -z "$ASC_KEY_BASE64" ] || [ -z "$ASC_KEY_ID" ] || [ -z "$ASC_ISSUER_ID" ]; then
+            echo "has_asc_key=false" >> "$GITHUB_OUTPUT"
+            echo "::error::Missing App Store Connect API secrets (APP_STORE_CONNECT_API_KEY_BASE64, APP_STORE_CONNECT_API_KEY_ID, APP_STORE_CONNECT_API_ISSUER_ID)."
+            exit 1
+          fi
+
+          mkdir -p "$HOME/.appstoreconnect/private_keys"
+          KEY_PATH="$HOME/.appstoreconnect/private_keys/AuthKey_${ASC_KEY_ID}.p8"
+          echo "$ASC_KEY_BASE64" | base64 --decode > "$KEY_PATH"
+          chmod 600 "$KEY_PATH"
+          echo "key_path=$KEY_PATH" >> "$GITHUB_OUTPUT"
+          echo "has_asc_key=true" >> "$GITHUB_OUTPUT"
+
+          if [ -n "$APPLE_DISTRIBUTION_CERT_BASE64" ] || [ -n "$MAC_INSTALLER_CERT_BASE64" ]; then
+            KEYCHAIN_PATH="$RUNNER_TEMP/appstore-build.keychain-db"
+            security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+            security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+            security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+
+            if [ -n "$APPLE_DISTRIBUTION_CERT_BASE64" ]; then
+              echo "$APPLE_DISTRIBUTION_CERT_BASE64" | base64 --decode > "$RUNNER_TEMP/apple-distribution.p12"
+              security import "$RUNNER_TEMP/apple-distribution.p12" -k "$KEYCHAIN_PATH" -P "${APPLE_DISTRIBUTION_CERT_PASSWORD:-}" -T /usr/bin/codesign -T /usr/bin/productsign
+            fi
+
+            if [ -n "$MAC_INSTALLER_CERT_BASE64" ]; then
+              echo "$MAC_INSTALLER_CERT_BASE64" | base64 --decode > "$RUNNER_TEMP/mac-installer.p12"
+              security import "$RUNNER_TEMP/mac-installer.p12" -k "$KEYCHAIN_PATH" -P "${MAC_INSTALLER_CERT_PASSWORD:-}" -T /usr/bin/codesign -T /usr/bin/productsign
+            fi
+
+            security set-key-partition-list -S apple-tool:,apple:,codesign:,productsign: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+            security list-keychains -d user -s "$KEYCHAIN_PATH" $(security list-keychains -d user | tr -d '"')
+            security find-identity -v "$KEYCHAIN_PATH"
+          else
+            echo "No custom .p12 secrets provided; using Xcode Cloud Managed Signing via App Store Connect API key."
+          fi
+
+      - name: Export Signed Mac App Store Package (.pkg)
+        id: export
+        env:
+          ASC_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_API_ISSUER_ID }}
+        run: |
+          rm -rf .build/export
+          xcodebuild -exportArchive \
+            -archivePath .build/FocusBar.xcarchive \
+            -exportOptionsPlist ExportOptions-AppStore.plist \
+            -exportPath .build/export \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "${{ steps.signing.outputs.key_path }}" \
+            -authenticationKeyID "$ASC_KEY_ID" \
+            -authenticationKeyIssuerID "$ASC_ISSUER_ID"
+
+          PKG_PATH=$(find .build/export -maxdepth 2 -name '*.pkg' | head -n 1)
+          if [ -z "$PKG_PATH" ]; then
+            echo "::error::Export completed but no .pkg file was found in .build/export"
+            ls -la .build/export
+            exit 1
+          fi
+
+          echo "pkg_path=$PKG_PATH" >> "$GITHUB_OUTPUT"
+          ls -lh "$PKG_PATH"
+          pkgutil --check-signature "$PKG_PATH"
+
+      - name: Upload Signed Mac App Store Package Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: FocusBar-AppStore-v${{ steps.version.outputs.version }}-b${{ steps.version.outputs.build_number }}
+          path: ${{ steps.export.outputs.pkg_path }}
+          retention-days: 30
+
+      - name: Validate & Upload Package to App Store Connect
+        if: ${{ github.event_name == 'push' || inputs.upload_to_app_store_connect }}
+        env:
+          ASC_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_API_ISSUER_ID }}
+        run: |
+          PKG_PATH="${{ steps.export.outputs.pkg_path }}"
+          echo "Validating $PKG_PATH with App Store Connect..."
+          xcrun altool --validate-app \
+            --type macos \
+            --file "$PKG_PATH" \
+            --apiKey "$ASC_KEY_ID" \
+            --apiIssuer "$ASC_ISSUER_ID"
+
+          echo "Uploading $PKG_PATH to App Store Connect..."
+          xcrun altool --upload-app \
+            --type macos \
+            --file "$PKG_PATH" \
+            --apiKey "$ASC_KEY_ID" \
+            --apiIssuer "$ASC_ISSUER_ID"
+
+      - name: Cleanup Secrets & Temporary Keychain
+        if: always()
+        run: |
+          rm -rf "$HOME/.appstoreconnect/private_keys"
+          rm -f "$RUNNER_TEMP/apple-distribution.p12" "$RUNNER_TEMP/mac-installer.p12"
+          if [ -f "$RUNNER_TEMP/appstore-build.keychain-db" ]; then
+            security delete-keychain "$RUNNER_TEMP/appstore-build.keychain-db" || true
+          fi
+          rm -rf .build
